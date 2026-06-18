@@ -6,7 +6,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 
 ## Tasks
 
-- [ ] 1. Set up project structure, types, and utility functions
+- [x] 1. Set up project structure, types, and utility functions
   - [x] 1.1 Initialize Vite + React + TypeScript project and configure TailwindCSS, React Router, Zustand, and Vitest + fast-check
     - Create Vite project with React-TS template
     - Install dependencies: react-router-dom, zustand, tailwindcss, postcss, autoprefixer, vitest, fast-check, axios
@@ -15,7 +15,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Create directory structure: `src/services/__tests__/`, `src/store/`, `src/pages/`, `src/components/{layout,quest,badge,leaderboard,shared}/`, `src/types/`, `src/utils/__tests__/`
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ] 1.2 Define all domain types and interfaces in `src/types/index.ts`
+  - [x] 1.2 Define all domain types and interfaces in `src/types/index.ts`
     - Implement `Member`, `Quest`, `QuestCompletion`, `Badge`, `BadgeEarned` interfaces
     - Implement `CategorizedQuests`, `BadgeCollectionView`, `LeaderboardEntry` interfaces
     - Implement `LarkFilter`, `FilterCondition`, `LarkSort`, `LarkRecord`, `SendResult` API types
@@ -24,7 +24,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Define quest status type: `'active' | 'pending' | 'rejected'`
     - _Requirements: 1.1, 2.1, 5.1, 6.1, 7.1_
 
-  - [ ] 1.3 Implement validation utility functions in `src/utils/validation.ts`
+  - [x] 1.3 Implement validation utility functions in `src/utils/validation.ts`
     - `validateTaskTitle(title: string): { valid: boolean; error?: string }` — required, 1–100 chars, not whitespace-only
     - `validateTaskDescription(description: string): { valid: boolean; error?: string }` — optional, max 500 chars
     - `validateRejectionReason(reason: string): { valid: boolean; error?: string }` — required, 1–250 chars
@@ -37,7 +37,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Test that 1–100 char non-whitespace-only strings are accepted
     - Use fast-check arbitraries to generate edge-case strings
 
-  - [ ] 1.5 Implement permission utility functions in `src/utils/permissions.ts`
+  - [x] 1.5 Implement permission utility functions in `src/utils/permissions.ts`
     - `canCompleteQuest(quest: Quest): boolean` — returns true only if quest.status === 'active'
     - `canApproveReject(viewerId: string, quest: Quest, viewerIsScrumMaster: boolean): boolean` — true if quest.status === 'pending' AND viewerIsScrumMaster AND viewerId !== quest.proposerId
     - `canModifyPendingTask(quest: Quest): boolean` — returns false for pending quests
