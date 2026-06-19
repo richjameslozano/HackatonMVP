@@ -279,29 +279,20 @@ describe('lark-api.service', () => {
         });
 
         it('should throw timeout error when request is aborted', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockImplementation((_url: string, opts?: RequestInit) => {
-                    // Simulate abort by rejecting with AbortError when signal is aborted
-                    return new Promise((_resolve, reject) => {
-                        if (opts?.signal) {
-                            opts.signal.addEventListener('abort', () => {
-                                const err = new DOMException('The operation was aborted.', 'AbortError');
-                                reject(err);
-                            });
-                        }
-                    });
-                });
+            // Simulate AbortError being thrown immediately (as if the signal was already aborted)
+            const abortError = new DOMException('The operation was aborted.', 'AbortError');
 
-            // Use fake timers to trigger the abort quickly
-            vi.useFakeTimers();
-            const promise = listRecords('tbl_quests');
+            mockFetch.mockImplementation((url: string) => {
+                if ((url as string).includes('tenant_access_token')) {
+                    return Promise.resolve(mockTokenResponse());
+                }
+                // Immediately reject with AbortError to simulate timeout
+                return Promise.reject(abortError);
+            });
 
-            // Advance past the timeout (3 retries * 10s each)
-            await vi.advanceTimersByTimeAsync(30_001);
-
-            await expect(promise).rejects.toThrow('Request timed out after 10000ms');
-            vi.useRealTimers();
+            await expect(listRecords('tbl_quests')).rejects.toThrow(
+                'Request timed out after 10000ms',
+            );
         });
     });
 

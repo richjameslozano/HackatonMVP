@@ -144,8 +144,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - **Property 18: Badge collection correctness**
     - **Validates: Requirements 7.1, 7.2, 7.3**
 
-- [ ] 6. Implement notification service
-  - [ ] 6.1 Implement `src/services/notification.service.ts`
+- [x] 6. Implement notification service
+  - [x] 6.1 Implement `src/services/notification.service.ts`
     - `notifyTaskProposal(quest, developer, scrumMaster)` — send bot message to Scrum Master with task title and proposer name
     - `notifyApproval(quest, scrumMaster, developer)` — send approval notification to Developer with task title and SM name
     - `notifyRejection(quest, scrumMaster, developer, reason)` — send rejection notification with task title, SM name, and reason
@@ -158,11 +158,11 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - **Validates: Requirements 2.6**
     - Test that notification target resolution always returns the correct scrum_master_id
 
-- [ ] 7. Checkpoint - Ensure all service tests pass
+- [x] 7. Checkpoint - Ensure all service tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement Zustand store
-  - [ ] 8.1 Implement `src/store/app.store.ts` — global application state and actions
+- [x] 8. Implement Zustand store
+  - [x] 8.1 Implement `src/store/app.store.ts` — global application state and actions
     - Define state: `currentMember`, `selectedRole`, `quests`, `questsLoading`, `leaderboard`, `leaderboardLoading`, `badgeCollection`, `badgesLoading`
     - Implement `initializeApp(openId)` — fetch current member, set default role from primary_role, trigger initial data fetch
     - Implement `setRole(role)` — update selectedRole, persist to sessionStorage, trigger data refresh for quests + leaderboard + badges
@@ -177,8 +177,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - On notification failure: display non-blocking warning toast but allow action to succeed
     - _Requirements: 1.1, 1.4, 1.6, 2.3, 2.5, 3.4, 3.6, 4.4, 4.6, 6.4, 10.3, 10.4, 10.5_
 
-- [ ] 9. Implement shared and layout UI components
-  - [ ] 9.1 Implement shared components in `src/components/shared/`
+- [x] 9. Implement shared and layout UI components
+  - [x] 9.1 Implement shared components in `src/components/shared/`
     - `LoadingIndicator` — spinner shown during API operations, used per-section
     - `ErrorBanner` — error display shown on API failure after retries, retains last successful data context
     - `ConfirmationToast` — success/warning messages for completed actions (quest completion, task approval, rejection, proposal)
@@ -186,7 +186,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - `CompletionAnimation` — visual feedback animation on quest completion
     - _Requirements: 8.6, 8.7, 4.6, 2.5, 3.6_
 
-  - [ ] 9.2 Implement layout components in `src/components/layout/`
+  - [x] 9.2 Implement layout components in `src/components/layout/`
     - `AppShell` — top-level layout with NavigationBar and RoleSwitcher, wraps page content
     - `NavigationBar` — links to quest board (`/quests`), leaderboard (`/leaderboard`), badge collection (`/badges`)
     - `RoleSwitcher` — toggle between Agent/Developer views; hidden if user has single role; persists selection in sessionStorage; triggers store `setRole()` on change
