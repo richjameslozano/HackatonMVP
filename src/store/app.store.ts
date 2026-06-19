@@ -175,7 +175,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { currentMember } = get();
     if (!currentMember) return;
 
-    const quest = await proposeTask(title, description, currentMember.memberId);
+    let quest;
+    try {
+      quest = await proposeTask(title, description, currentMember.memberId);
+    } catch (err) {
+      console.error('[proposeTask] Failed:', err);
+      throw err;
+    }
 
     // Send notification to Scrum Master (non-blocking on failure)
     try {

@@ -147,7 +147,7 @@ export async function proposeTask(
     target_role: 'developer',
     status: 'pending',
     proposer_id: developerId,
-    created_at: new Date().toISOString(),
+    created_at: Date.now(),
   };
 
   const record = await createRecord(TABLE_IDS.quests, fields);

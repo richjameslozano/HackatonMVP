@@ -285,7 +285,8 @@ export async function createRecord(
             });
 
             if (!response.ok) {
-                throw new Error(`createRecord failed: ${response.status}`);
+                const errorBody = await response.text();
+                throw new Error(`createRecord failed: ${response.status} - ${errorBody}`);
             }
 
             const data = (await response.json()) as {
@@ -293,6 +294,10 @@ export async function createRecord(
                 msg: string;
                 data: { record: { record_id: string; fields: Record<string, unknown> } };
             };
+
+            if (data.code !== 0) {
+                throw new Error(`createRecord API error: ${data.msg} (code ${data.code})`);
+            }
 
             return {
                 record_id: data.data.record.record_id,
