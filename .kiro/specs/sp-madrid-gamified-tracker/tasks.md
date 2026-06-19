@@ -71,27 +71,29 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Return `SendResult` with success/failure status and error details
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-  - [ ]* 3.3 Write integration tests for `lark-api.service.ts`
+  - [ ]* 3.3 Write integration tests for Lark API and Bot services
     - Mock fetch/axios to test correct endpoint construction, headers, and payloads
     - Test retry behavior: verify 3 retries on failure
     - Test timeout behavior: verify 10-second timeout per attempt
     - Test error handling: verify graceful degradation on API failures
-    - _Requirements: 8.6, 8.7_
+    - Test bot message delivery and SendResult shape
+    - _Requirements: 8.6, 8.7, 9.4_
 
-- [ ] 4. Implement domain services — Member and Quest
-  - [ ] 4.1 Implement `src/services/member.service.ts`
-    - `getCurrentMember()` — resolve current user from Members table using Lark open_id
+- [x] 4. Implement domain services — Member and Quest
+  - [x] 4.1 Implement `src/services/member.service.ts`
+    - `getCurrentMember(openId)` — resolve current user from Members table using Lark open_id
     - `getMemberById(memberId)` — fetch a specific member record
     - `getScrumMasterForDeveloper(developerId)` — resolve assigned Scrum Master from scrum_master_id field
+    - Map raw Lark records to `Member` domain objects with proper role parsing
     - _Requirements: 1.1, 2.6, 8.2_
 
-  - [ ] 4.2 Implement `src/services/quest.service.ts`
-    - `getQuestsForRole(role, memberId)` — fetch quests filtered by target_role, categorize into CategorizedQuests
+  - [x] 4.2 Implement `src/services/quest.service.ts`
+    - `getQuestsForRole(role, memberId)` — fetch quests filtered by target_role, categorize into CategorizedQuests (onboarding/daily/milestones for agents; sprint/pending for developers)
     - `proposeTask(title, description, developerId)` — validate inputs, create quest with status='pending' and proposer_id set
     - `approveTask(questId, scrumMasterId)` — update quest status from 'pending' to 'active'
     - `rejectTask(questId, scrumMasterId, reason)` — validate rejection reason, update quest status from 'pending' to 'rejected'
     - `completeQuest(questId, memberId)` — check status is 'active', check no duplicate completion exists, write Quest_Completion record
-    - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 3.2, 3.3, 4.1, 4.2, 4.3, 4.5, 11.3_
+    - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.4, 3.2, 3.3, 4.1, 4.2, 4.3, 4.5, 11.3_
 
   - [ ]* 4.3 Write property tests for quest service logic
     - **Property 1: Role-based quest filtering**
@@ -103,23 +105,25 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Mock lark-api.service for isolated property testing
 
   - [ ]* 4.4 Write unit tests for quest service edge cases
-    - Test completing a quest with pending status returns error with correct message
-    - Test completing a quest with rejected status returns error with correct message
+    - Test completing a quest with pending status returns error: "This task requires Scrum Master approval before completion"
+    - Test completing a quest with rejected status returns error: "This task has been rejected and cannot be completed"
     - Test propose task with empty title is rejected
     - Test propose task with title at exactly 100 chars is accepted
+    - Test propose task with title at 101 chars is rejected
     - _Requirements: 4.3, 11.3, 11.4, 11.5_
 
-- [ ] 5. Implement domain services — Badge and Leaderboard
+- [-] 5. Implement domain services — Badge and Leaderboard
   - [ ] 5.1 Implement `src/services/badge.service.ts`
     - `evaluateBadgeUnlocks(memberId, role)` — count qualifying completions (active-only for developers), compare against badge thresholds, award all qualifying badges, prevent duplicates
     - `getBadgeCollection(memberId, role)` — fetch all role badges, join with Badge_Earned for earned state, compute progress fraction
     - Filter out completions linked to non-active quests for developer calculations
     - Handle multi-badge simultaneous unlock in a single evaluation pass
+    - Return list of newly awarded badges for UI feedback
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 7.1, 7.2, 7.3_
 
   - [ ] 5.2 Implement `src/services/leaderboard.service.ts`
-    - `getLeaderboard(role)` — fetch all members with given role, count their earned badges (active-only completions for developers), sort by badge count descending with alphabetical tie-breaker, assign ranks
-    - Include all members even with zero badges
+    - `getLeaderboard(role)` — fetch all members with given role, count their earned badges (active-only completions for developers), sort by badge count descending with alphabetical display_name tie-breaker, assign ranks
+    - Include all members with the role even if they have zero badges
     - _Requirements: 6.1, 6.2, 6.3, 6.5, 11.1, 11.2_
 
   - [ ]* 5.3 Write property tests for badge service
@@ -160,86 +164,91 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 - [ ] 8. Implement Zustand store
   - [ ] 8.1 Implement `src/store/app.store.ts` — global application state and actions
     - Define state: `currentMember`, `selectedRole`, `quests`, `questsLoading`, `leaderboard`, `leaderboardLoading`, `badgeCollection`, `badgesLoading`
-    - Implement `setRole(role)` — update selectedRole, persist to sessionStorage, trigger data refresh
+    - Implement `initializeApp(openId)` — fetch current member, set default role from primary_role, trigger initial data fetch
+    - Implement `setRole(role)` — update selectedRole, persist to sessionStorage, trigger data refresh for quests + leaderboard + badges
     - Implement `fetchQuests()` — call quest.service.getQuestsForRole, update state
-    - Implement `completeQuest(questId)` — call quest.service.completeQuest, then badge.service.evaluateBadgeUnlocks, refresh quests and leaderboard
-    - Implement `proposeTask(title, description)` — call quest.service.proposeTask, then notification.service.notifyTaskProposal, refresh quests
+    - Implement `completeQuest(questId)` — call quest.service.completeQuest, then badge.service.evaluateBadgeUnlocks, refresh quests and leaderboard, show completion animation feedback
+    - Implement `proposeTask(title, description)` — call quest.service.proposeTask, then notification.service.notifyTaskProposal via getScrumMasterForDeveloper, refresh quests
     - Implement `approveTask(questId)` — call quest.service.approveTask, then notification.service.notifyApproval, refresh quests
     - Implement `rejectTask(questId, reason)` — call quest.service.rejectTask, then notification.service.notifyRejection, refresh quests
-    - Implement `fetchLeaderboard()` — call leaderboard.service.getLeaderboard
-    - Implement `fetchBadgeCollection()` — call badge.service.getBadgeCollection
-    - Implement `initializeApp()` — fetch current member, set default role from primary_role, trigger initial data fetch
+    - Implement `fetchLeaderboard()` — call leaderboard.service.getLeaderboard with selectedRole
+    - Implement `fetchBadgeCollection()` — call badge.service.getBadgeCollection with selectedRole
     - Handle loading states per section independently
-    - _Requirements: 1.1, 1.4, 1.6, 4.4, 6.4, 10.3, 10.4, 10.5_
+    - On notification failure: display non-blocking warning toast but allow action to succeed
+    - _Requirements: 1.1, 1.4, 1.6, 2.3, 2.5, 3.4, 3.6, 4.4, 4.6, 6.4, 10.3, 10.4, 10.5_
 
-- [ ] 9. Implement shared UI components
+- [ ] 9. Implement shared and layout UI components
   - [ ] 9.1 Implement shared components in `src/components/shared/`
-    - `LoadingIndicator` — spinner shown during API operations
+    - `LoadingIndicator` — spinner shown during API operations, used per-section
     - `ErrorBanner` — error display shown on API failure after retries, retains last successful data context
-    - `ConfirmationToast` — success/warning messages for completed actions
-    - `ValidationError` — inline form validation feedback
-    - `CompletionAnimation` — visual feedback on quest completion
+    - `ConfirmationToast` — success/warning messages for completed actions (quest completion, task approval, rejection, proposal)
+    - `ValidationError` — inline form validation feedback for title/description/reason fields
+    - `CompletionAnimation` — visual feedback animation on quest completion
     - _Requirements: 8.6, 8.7, 4.6, 2.5, 3.6_
 
   - [ ] 9.2 Implement layout components in `src/components/layout/`
-    - `AppShell` — top-level layout with NavigationBar and RoleSwitcher
-    - `NavigationBar` — links to quest board, leaderboard, badge collection pages
-    - `RoleSwitcher` — toggle between Agent/Developer views, hidden if user has single role, persists selection in session
+    - `AppShell` — top-level layout with NavigationBar and RoleSwitcher, wraps page content
+    - `NavigationBar` — links to quest board (`/quests`), leaderboard (`/leaderboard`), badge collection (`/badges`)
+    - `RoleSwitcher` — toggle between Agent/Developer views; hidden if user has single role; persists selection in sessionStorage; triggers store `setRole()` on change
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
 - [ ] 10. Implement Quest Board UI
   - [ ] 10.1 Implement quest board components in `src/components/quest/`
-    - `QuestCard` — individual quest with completion checkbox, disabled for pending/rejected with tooltip
-    - `QuestCategory` — category container (onboarding, daily, milestone, sprint, pending)
-    - `ProposeTaskForm` — developer task proposal form with title/description validation
-    - `PendingTaskCard` — task card with approve/reject buttons (visible only to assigned Scrum Master, hidden from proposer)
+    - `QuestCard` — individual quest with completion checkbox; disabled for pending/rejected quests with tooltip explaining restriction
+    - `QuestCategory` — category container with heading (onboarding, daily, milestone, sprint, pending)
+    - `ProposeTaskForm` — developer task proposal form with title (required, max 100 chars) and description (optional, max 500 chars) fields with real-time validation
+    - `PendingTaskCard` — task card with approve/reject buttons visible only to assigned Scrum Master, hidden from proposer; reject triggers reason prompt modal
     - _Requirements: 1.2, 1.3, 2.1, 2.2, 2.4, 3.1, 3.5, 4.3, 11.4, 11.5_
 
   - [ ] 10.2 Implement `src/pages/QuestBoardPage.tsx`
-    - Connect to Zustand store for quests data and loading state
+    - Connect to Zustand store for quests data, loading state, and current member
     - Render categorized quests based on selected role
-    - Show empty state with category headings and "no quests available" message when applicable
     - Agent view: onboarding, daily, milestones categories
-    - Developer view: approved sprint tasks, pending tasks section
-    - Handle quest completion with confirmation animation
-    - Display rejection reason prompt modal for Scrum Master reject action
-    - Cancel rejection if prompt is dismissed without text
-    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.7_
+    - Developer view: approved sprint tasks, pending tasks section with ProposeTaskForm
+    - Show empty state with category headings and "no quests available" message when applicable
+    - Handle quest completion: dispatch store action, show CompletionAnimation
+    - Handle task proposal: dispatch store action, show ConfirmationToast on success
+    - Handle approval: dispatch store action, show ConfirmationToast
+    - Handle rejection: show reason prompt modal, cancel if dismissed without text, dispatch store action with reason, show ConfirmationToast
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.7, 4.6_
 
 - [ ] 11. Implement Leaderboard and Badge Collection UI
   - [ ] 11.1 Implement leaderboard components in `src/components/leaderboard/`
     - `LeaderboardTable` — ranked table with display name, rank position, and badge count columns
-    - `LeaderboardRow` — single member row, highlighted if current user
+    - `LeaderboardRow` — single member row with visual highlight if current user
     - _Requirements: 6.1, 6.6_
 
   - [ ] 11.2 Implement `src/pages/LeaderboardPage.tsx`
-    - Connect to Zustand store for leaderboard data and role
+    - Connect to Zustand store for leaderboard data, loading state, and selected role
     - Display role-separated leaderboard (Agent or Developer based on selected role)
-    - Highlight current user's row
-    - Show loading indicator during fetch
+    - Highlight current user's row distinctly
+    - Show LoadingIndicator during fetch
+    - Trigger `fetchLeaderboard()` on mount and on role change
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
   - [ ] 11.3 Implement badge components in `src/components/badge/`
     - `BadgeGrid` — grid layout of all role-specific badges
-    - `BadgeCard` — earned badges in full color with earned label, locked badges in grayscale with locked label, unlock condition text below locked badges
+    - `BadgeCard` — earned badges in full color with earned label; locked badges in grayscale with locked label; unlock condition text below locked badges
     - `ProgressBar` — fraction of badges earned with numeric label (e.g., "3 / 6")
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
   - [ ] 11.4 Implement `src/pages/BadgeCollectionPage.tsx`
-    - Connect to Zustand store for badge collection data and role
-    - Display badge grid with earned/locked states
-    - Show progress bar with earned count / total count
+    - Connect to Zustand store for badge collection data, loading state, and selected role
+    - Display BadgeGrid with earned/locked states
+    - Show ProgressBar with earned count / total count
     - Show encouragement message when zero badges earned
-    - Show loading indicator during fetch
+    - Show LoadingIndicator during fetch
+    - Trigger `fetchBadgeCollection()` on mount and on role change
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 12. Wire routing and app initialization
   - [ ] 12.1 Implement `src/App.tsx` with React Router configuration
     - Define routes: `/quests` (QuestBoardPage), `/leaderboard` (LeaderboardPage), `/badges` (BadgeCollectionPage)
     - Default route redirects to `/quests`
-    - Wrap routes in AppShell layout
+    - Wrap routes in AppShell layout component
     - Call `initializeApp()` store action on mount
-    - _Requirements: 1.1, 10.3_
+    - Show full-page LoadingIndicator while member is resolving
+    - _Requirements: 1.1, 1.6, 10.3_
 
   - [ ] 12.2 Update `src/main.tsx` entry point
     - Mount React app with BrowserRouter
@@ -251,9 +260,9 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 
 - [ ]* 14. Write integration tests for notification and end-to-end flows
   - [ ]* 14.1 Write integration tests for notification service with mocked bot
-    - Test correct message construction for task proposal notification
-    - Test correct message construction for approval notification
-    - Test correct message construction for rejection notification (includes reason)
+    - Test correct message construction for task proposal notification (includes task title and proposer name)
+    - Test correct message construction for approval notification (includes task title and SM name)
+    - Test correct message construction for rejection notification (includes task title, SM name, and reason)
     - Test failure handling: warning toast shown, action completes successfully
     - Test unresolvable recipient: treated as delivery failure
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
@@ -262,7 +271,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Test quest completion triggers badge evaluation
     - Test badge awarded when threshold met
     - Test leaderboard updates after badge award
-    - Test failed badge write retains quest completion
+    - Test failed badge write retains quest completion as valid and shows warning
+    - Test re-evaluation on next completion event after badge write failure
     - _Requirements: 4.4, 5.1, 5.7, 6.4_
 
 - [ ] 15. Final checkpoint - Ensure all tests pass and application builds cleanly
@@ -279,24 +289,24 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 - All API calls go through the service layer; components never call APIs directly
 - Zustand store bridges services and UI; components dispatch store actions
 - No local data persistence beyond browser session (sessionStorage for role selection only)
+- Tasks 1-3 are already implemented: project structure, types, validation utils, permission utils, Lark API service, and Lark Bot service are complete
 
 ## Task Dependency Graph
 
 ```json
 {
   "waves": [
-    { "id": 0, "tasks": ["1.1"] },
-    { "id": 1, "tasks": ["1.2"] },
-    { "id": 2, "tasks": ["1.3", "1.5", "3.1", "3.2"] },
-    { "id": 3, "tasks": ["1.4", "1.6", "3.3", "4.1"] },
-    { "id": 4, "tasks": ["4.2", "6.1"] },
-    { "id": 5, "tasks": ["4.3", "4.4", "5.1", "5.2", "6.2"] },
-    { "id": 6, "tasks": ["5.3", "5.4", "5.5", "8.1"] },
-    { "id": 7, "tasks": ["9.1", "9.2"] },
-    { "id": 8, "tasks": ["10.1", "11.1", "11.3"] },
-    { "id": 9, "tasks": ["10.2", "11.2", "11.4"] },
-    { "id": 10, "tasks": ["12.1", "12.2"] },
-    { "id": 11, "tasks": ["14.1", "14.2"] }
+    { "id": 0, "tasks": ["1.4", "1.6", "3.3"] },
+    { "id": 1, "tasks": ["4.1"] },
+    { "id": 2, "tasks": ["4.2"] },
+    { "id": 3, "tasks": ["4.3", "4.4", "5.1", "5.2", "6.1"] },
+    { "id": 4, "tasks": ["5.3", "5.4", "5.5", "6.2"] },
+    { "id": 5, "tasks": ["8.1"] },
+    { "id": 6, "tasks": ["9.1", "9.2"] },
+    { "id": 7, "tasks": ["10.1", "11.1", "11.3"] },
+    { "id": 8, "tasks": ["10.2", "11.2", "11.4"] },
+    { "id": 9, "tasks": ["12.1", "12.2"] },
+    { "id": 10, "tasks": ["14.1", "14.2"] }
   ]
 }
 ```
