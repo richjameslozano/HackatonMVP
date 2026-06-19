@@ -192,15 +192,15 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - `RoleSwitcher` — toggle between Agent/Developer views; hidden if user has single role; persists selection in sessionStorage; triggers store `setRole()` on change
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 10. Implement Quest Board UI
-  - [ ] 10.1 Implement quest board components in `src/components/quest/`
+- [x] 10. Implement Quest Board UI
+  - [x] 10.1 Implement quest board components in `src/components/quest/`
     - `QuestCard` — individual quest with completion checkbox; disabled for pending/rejected quests with tooltip explaining restriction
     - `QuestCategory` — category container with heading (onboarding, daily, milestone, sprint, pending)
     - `ProposeTaskForm` — developer task proposal form with title (required, max 100 chars) and description (optional, max 500 chars) fields with real-time validation
     - `PendingTaskCard` — task card with approve/reject buttons visible only to assigned Scrum Master, hidden from proposer; reject triggers reason prompt modal
     - _Requirements: 1.2, 1.3, 2.1, 2.2, 2.4, 3.1, 3.5, 4.3, 11.4, 11.5_
 
-  - [ ] 10.2 Implement `src/pages/QuestBoardPage.tsx`
+  - [x] 10.2 Implement `src/pages/QuestBoardPage.tsx`
     - Connect to Zustand store for quests data, loading state, and current member
     - Render categorized quests based on selected role
     - Agent view: onboarding, daily, milestones categories
