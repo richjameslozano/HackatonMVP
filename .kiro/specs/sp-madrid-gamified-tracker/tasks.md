@@ -112,8 +112,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Test propose task with title at 101 chars is rejected
     - _Requirements: 4.3, 11.3, 11.4, 11.5_
 
-- [-] 5. Implement domain services — Badge and Leaderboard
-  - [ ] 5.1 Implement `src/services/badge.service.ts`
+- [x] 5. Implement domain services — Badge and Leaderboard
+  - [x] 5.1 Implement `src/services/badge.service.ts`
     - `evaluateBadgeUnlocks(memberId, role)` — count qualifying completions (active-only for developers), compare against badge thresholds, award all qualifying badges, prevent duplicates
     - `getBadgeCollection(memberId, role)` — fetch all role badges, join with Badge_Earned for earned state, compute progress fraction
     - Filter out completions linked to non-active quests for developer calculations
@@ -121,7 +121,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Return list of newly awarded badges for UI feedback
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 7.1, 7.2, 7.3_
 
-  - [ ] 5.2 Implement `src/services/leaderboard.service.ts`
+  - [x] 5.2 Implement `src/services/leaderboard.service.ts`
     - `getLeaderboard(role)` — fetch all members with given role, count their earned badges (active-only completions for developers), sort by badge count descending with alphabetical display_name tie-breaker, assign ranks
     - Include all members with the role even if they have zero badges
     - _Requirements: 6.1, 6.2, 6.3, 6.5, 11.1, 11.2_
