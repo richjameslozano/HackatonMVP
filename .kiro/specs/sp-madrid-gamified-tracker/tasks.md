@@ -51,7 +51,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - **Property 19: Role switcher visibility**
     - **Validates: Requirements 2.4, 3.1, 3.5, 4.3, 10.1, 10.2**
 
-- [ ] 2. Checkpoint - Ensure all tests pass
+- [x] 2. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 3. Implement Lark API service layer
