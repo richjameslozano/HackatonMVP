@@ -100,6 +100,11 @@ export interface LarkRecord {
   fields: Record<string, unknown>;
 }
 
+export interface LarkMessage {
+  msg_type: 'text' | 'interactive';
+  content: string; // JSON-stringified message content
+}
+
 export interface SendResult {
   success: boolean;
   messageId?: string;

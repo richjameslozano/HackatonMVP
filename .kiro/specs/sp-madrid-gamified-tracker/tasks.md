@@ -54,8 +54,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 - [x] 2. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Implement Lark API service layer
-  - [ ] 3.1 Implement `src/services/lark-api.service.ts` — generic Lark Base API wrapper
+- [x] 3. Implement Lark API service layer
+  - [x] 3.1 Implement `src/services/lark-api.service.ts` — generic Lark Base API wrapper
     - Implement `listRecords(tableId, filter?, sort?)` using Lark Bitable API endpoint
     - Implement `getRecord(tableId, recordId)`
     - Implement `createRecord(tableId, fields)`
@@ -65,7 +65,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Store table IDs as configuration constants
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8_
 
-  - [ ] 3.2 Implement `src/services/lark-bot.service.ts` — Lark Bot messaging wrapper
+  - [x] 3.2 Implement `src/services/lark-bot.service.ts` — Lark Bot messaging wrapper
     - Implement `sendMessage(recipientOpenId, message)` using Lark IM v1 API
     - Ensure non-blocking: failures do not prevent triggering action from completing
     - Return `SendResult` with success/failure status and error details
