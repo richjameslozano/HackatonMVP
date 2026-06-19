@@ -1,16 +1,15 @@
 // ─── Lark Platform Configuration ────────────────────────────────────────────
-// These values come from the Lark Open Platform app settings.
-// In production, consider loading from environment variables via Vite's import.meta.env.
+// Copy this file to `config.ts` and fill in your actual credentials.
+// DO NOT commit config.ts — it is gitignored.
 
 export const LARK_CONFIG = {
-    appId: 'cli_a91865699678de19',
-    appSecret: 'uXHJs2ELAT7QhXGwHW0RFet6CahLnl2k',
-    baseAppToken: 'PyPSbWKVpakTg5s0uEujZ24fpaf',
+    appId: 'YOUR_LARK_APP_ID',
+    appSecret: 'YOUR_LARK_APP_SECRET',
+    baseAppToken: 'YOUR_LARK_BASE_APP_TOKEN',
     baseUrl: 'https://open.larksuite.com/open-apis',
 } as const;
 
 // ─── Lark Base Table IDs ────────────────────────────────────────────────────
-// These correspond to the five tables in the SP Madrid Gamified Tracker Bitable.
 // Replace with actual table IDs from your Lark Base app.
 
 export const TABLE_IDS = {

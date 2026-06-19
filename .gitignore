@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Lark credentials (use config.example.ts as template)
+src/services/config.ts
