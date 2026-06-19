@@ -6,12 +6,15 @@ import type {
   LeaderboardEntry,
   BadgeCollectionView,
   Badge,
+  LarkFilter,
 } from '../types';
 import { getCurrentMember, getScrumMasterForDeveloper } from '../services/member.service';
 import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest } from '../services/quest.service';
 import { evaluateBadgeUnlocks, getBadgeCollection } from '../services/badge.service';
 import { getLeaderboard } from '../services/leaderboard.service';
 import { notifyTaskProposal, notifyApproval, notifyRejection } from '../services/notification.service';
+import { listRecords, extractTextValue } from '../services/lark-api.service';
+import { TABLE_IDS } from '../services/config';
 
 // ─── Session Storage Key ────────────────────────────────────────────────────
 
@@ -38,6 +41,9 @@ export interface AppState {
   questsLoading: boolean;
   leaderboardLoading: boolean;
   badgesLoading: boolean;
+
+  // Completed quest tracking
+  completedQuestIds: Set<string>;
 
   // Feedback states
   notificationWarning: string | null;
@@ -69,6 +75,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   questsLoading: false,
   leaderboardLoading: false,
   badgesLoading: false,
+  completedQuestIds: new Set<string>(),
   notificationWarning: null,
   completionFeedback: null,
 
@@ -111,7 +118,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ questsLoading: true });
     try {
       const quests = await getQuestsForRole(selectedRole, currentMember.memberId);
-      set({ quests });
+
+      // Fetch user's completions to track which quests are already done
+      const completionsFilter: LarkFilter = {
+        conjunction: 'and',
+        conditions: [
+          { field_name: 'member_id', operator: 'is', value: [currentMember.memberId] },
+        ],
+      };
+      const completionRecords = await listRecords(TABLE_IDS.questCompletions, completionsFilter);
+      const completedQuestIds = new Set(
+        completionRecords.map((r) => extractTextValue(r.fields.quest_id))
+      );
+
+      set({ quests, completedQuestIds });
     } finally {
       set({ questsLoading: false });
     }
@@ -121,7 +141,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { currentMember, selectedRole } = get();
     if (!currentMember || !selectedRole) return;
 
-    await completeQuest(questId, currentMember.memberId);
+    try {
+      await completeQuest(questId, currentMember.memberId);
+    } catch (err) {
+      console.error('[completeQuest] Failed:', err);
+      throw err;
+    }
+
+    // Mark as completed locally
+    const updatedIds = new Set(get().completedQuestIds);
+    updatedIds.add(questId);
+    set({ completedQuestIds: updatedIds });
 
     // Evaluate badge unlocks
     const unlockedBadges = await evaluateBadgeUnlocks(currentMember.memberId, selectedRole);

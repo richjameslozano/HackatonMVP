@@ -212,13 +212,13 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Handle rejection: show reason prompt modal, cancel if dismissed without text, dispatch store action with reason, show ConfirmationToast
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.7, 4.6_
 
-- [ ] 11. Implement Leaderboard and Badge Collection UI
-  - [ ] 11.1 Implement leaderboard components in `src/components/leaderboard/`
+- [x] 11. Implement Leaderboard and Badge Collection UI
+  - [x] 11.1 Implement leaderboard components in `src/components/leaderboard/`
     - `LeaderboardTable` — ranked table with display name, rank position, and badge count columns
     - `LeaderboardRow` — single member row with visual highlight if current user
     - _Requirements: 6.1, 6.6_
 
-  - [ ] 11.2 Implement `src/pages/LeaderboardPage.tsx`
+  - [x] 11.2 Implement `src/pages/LeaderboardPage.tsx`
     - Connect to Zustand store for leaderboard data, loading state, and selected role
     - Display role-separated leaderboard (Agent or Developer based on selected role)
     - Highlight current user's row distinctly
@@ -226,13 +226,13 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Trigger `fetchLeaderboard()` on mount and on role change
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 11.3 Implement badge components in `src/components/badge/`
+  - [x] 11.3 Implement badge components in `src/components/badge/`
     - `BadgeGrid` — grid layout of all role-specific badges
     - `BadgeCard` — earned badges in full color with earned label; locked badges in grayscale with locked label; unlock condition text below locked badges
     - `ProgressBar` — fraction of badges earned with numeric label (e.g., "3 / 6")
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 11.4 Implement `src/pages/BadgeCollectionPage.tsx`
+  - [x] 11.4 Implement `src/pages/BadgeCollectionPage.tsx`
     - Connect to Zustand store for badge collection data, loading state, and selected role
     - Display BadgeGrid with earned/locked states
     - Show ProgressBar with earned count / total count
@@ -241,8 +241,8 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Trigger `fetchBadgeCollection()` on mount and on role change
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 12. Wire routing and app initialization
-  - [ ] 12.1 Implement `src/App.tsx` with React Router configuration
+- [x] 12. Wire routing and app initialization
+  - [x] 12.1 Implement `src/App.tsx` with React Router configuration
     - Define routes: `/quests` (QuestBoardPage), `/leaderboard` (LeaderboardPage), `/badges` (BadgeCollectionPage)
     - Default route redirects to `/quests`
     - Wrap routes in AppShell layout component
@@ -250,12 +250,12 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Show full-page LoadingIndicator while member is resolving
     - _Requirements: 1.1, 1.6, 10.3_
 
-  - [ ] 12.2 Update `src/main.tsx` entry point
+  - [x] 12.2 Update `src/main.tsx` entry point
     - Mount React app with BrowserRouter
     - Import global styles from `src/index.css`
     - _Requirements: 1.1_
 
-- [ ] 13. Checkpoint - Ensure application builds and all tests pass
+- [~] 13. Checkpoint - Ensure application builds and all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ]* 14. Write integration tests for notification and end-to-end flows
@@ -275,7 +275,7 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Test re-evaluation on next completion event after badge write failure
     - _Requirements: 4.4, 5.1, 5.7, 6.4_
 
-- [ ] 15. Final checkpoint - Ensure all tests pass and application builds cleanly
+- [~] 15. Final checkpoint - Ensure all tests pass and application builds cleanly
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

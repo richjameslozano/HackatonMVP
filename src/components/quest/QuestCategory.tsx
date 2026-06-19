@@ -1,10 +1,11 @@
-import { Quest } from '../../types';
+import type { Quest } from '../../types';
 import { QuestCard } from './QuestCard';
 
 interface QuestCategoryProps {
   title: string;
   quests: Quest[];
   onComplete: (questId: string) => void;
+  completedQuestIds?: Set<string>;
   emptyMessage?: string;
 }
 
@@ -12,6 +13,7 @@ export function QuestCategory({
   title,
   quests,
   onComplete,
+  completedQuestIds,
   emptyMessage = 'No quests available',
 }: QuestCategoryProps) {
   return (
@@ -27,6 +29,7 @@ export function QuestCategory({
               quest={quest}
               onComplete={onComplete}
               disabled={quest.status !== 'active'}
+              completed={completedQuestIds?.has(quest.questId) ?? false}
             />
           ))}
         </div>

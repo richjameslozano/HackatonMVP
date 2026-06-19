@@ -6,7 +6,7 @@ import type {
   LarkFilter,
   LarkRecord,
 } from '../types';
-import { listRecords, getRecord, createRecord, updateRecord } from './lark-api.service';
+import { listRecords, getRecord, createRecord, updateRecord, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 import { validateTaskTitle, validateTaskDescription, validateRejectionReason } from '../utils/validation';
 import { canCompleteQuest } from '../utils/permissions';
@@ -20,12 +20,12 @@ function mapRecordToQuest(record: LarkRecord): Quest {
   const fields = record.fields;
   return {
     questId: record.record_id,
-    title: (fields.title as string) ?? '',
-    description: (fields.description as string) ?? '',
+    title: extractTextValue(fields.title),
+    description: extractTextValue(fields.description),
     category: parseCategory(fields.category),
     targetRole: parseRole(fields.target_role),
     status: parseStatus(fields.status),
-    proposerId: (fields.proposer_id as string) ?? null,
+    proposerId: extractTextValue(fields.proposer_id) || null,
     createdAt: fields.created_at ? new Date(fields.created_at as string | number) : new Date(),
   };
 }
@@ -63,8 +63,8 @@ function mapRecordToCompletion(record: LarkRecord): QuestCompletion {
   const fields = record.fields;
   return {
     completionId: record.record_id,
-    memberId: (fields.member_id as string) ?? '',
-    questId: (fields.quest_id as string) ?? '',
+    memberId: extractTextValue(fields.member_id),
+    questId: extractTextValue(fields.quest_id),
     completedAt: fields.completed_at ? new Date(fields.completed_at as string | number) : new Date(),
   };
 }

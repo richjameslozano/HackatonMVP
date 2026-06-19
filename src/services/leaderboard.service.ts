@@ -1,5 +1,5 @@
 import type { Member, LeaderboardEntry, Role, LarkFilter, LarkRecord } from '../types';
-import { listRecords } from './lark-api.service';
+import { listRecords, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
@@ -11,11 +11,11 @@ function mapRecordToMember(record: LarkRecord): Member {
   const fields = record.fields;
   return {
     memberId: record.record_id,
-    displayName: (fields.display_name as string) ?? '',
-    openId: (fields.open_id as string) ?? '',
+    displayName: extractTextValue(fields.display_name),
+    openId: extractTextValue(fields.open_id),
     roles: parseRoles(fields.roles),
     primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
-    scrumMasterId: (fields.scrum_master_id as string) ?? null,
+    scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
   };
 }
 
@@ -76,7 +76,7 @@ export async function getLeaderboard(role: Role): Promise<LeaderboardEntry[]> {
   // Count badges per member
   const badgeCountMap = new Map<string, number>();
   for (const record of badgeEarnedRecords) {
-    const memberId = (record.fields.member_id as string) ?? '';
+    const memberId = extractTextValue(record.fields.member_id);
     if (memberId) {
       badgeCountMap.set(memberId, (badgeCountMap.get(memberId) ?? 0) + 1);
     }
@@ -99,7 +99,7 @@ export async function getLeaderboard(role: Role): Promise<LeaderboardEntry[]> {
 
   // Assign sequential ranks starting from 1
   for (let i = 0; i < entries.length; i++) {
-    entries[i].rank = i + 1;
+    entries[i]!.rank = i + 1;
   }
 
   return entries;

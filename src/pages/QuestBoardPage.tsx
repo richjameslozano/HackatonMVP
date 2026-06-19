@@ -15,6 +15,7 @@ export function QuestBoardPage() {
   const questsLoading = useAppStore((s) => s.questsLoading);
   const completionFeedback = useAppStore((s) => s.completionFeedback);
   const notificationWarning = useAppStore((s) => s.notificationWarning);
+  const completedQuestIds = useAppStore((s) => s.completedQuestIds);
 
   const storeCompleteQuest = useAppStore((s) => s.completeQuest);
   const storeProposeTask = useAppStore((s) => s.proposeTask);
@@ -109,16 +110,19 @@ export function QuestBoardPage() {
             title="Onboarding"
             quests={quests?.onboarding ?? []}
             onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
           />
           <QuestCategory
             title="Daily Tasks"
             quests={quests?.daily ?? []}
             onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
           />
           <QuestCategory
             title="Milestones"
             quests={quests?.milestones ?? []}
             onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
           />
         </>
       )}
@@ -130,6 +134,7 @@ export function QuestBoardPage() {
             title="Sprint Tasks"
             quests={quests?.sprint ?? []}
             onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
           />
 
           <section className="space-y-3">

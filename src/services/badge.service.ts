@@ -7,7 +7,7 @@ import type {
   LarkRecord,
   Quest,
 } from '../types';
-import { listRecords, createRecord } from './lark-api.service';
+import { listRecords, createRecord, extractTextValue, extractNumberValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
@@ -19,11 +19,11 @@ function mapRecordToBadge(record: LarkRecord): Badge {
   const fields = record.fields;
   return {
     badgeId: record.record_id,
-    name: (fields.name as string) ?? '',
-    iconUrl: (fields.icon_url as string) ?? '',
+    name: extractTextValue(fields.name),
+    iconUrl: extractTextValue(fields.icon_url),
     targetRole: parseRole(fields.target_role),
-    requiredCompletions: parseNumber(fields.required_completions),
-    description: (fields.description as string) ?? '',
+    requiredCompletions: extractNumberValue(fields.required_completions),
+    description: extractTextValue(fields.description),
   };
 }
 
@@ -34,8 +34,8 @@ function mapRecordToBadgeEarned(record: LarkRecord): BadgeEarned {
   const fields = record.fields;
   return {
     earnedId: record.record_id,
-    memberId: (fields.member_id as string) ?? '',
-    badgeId: (fields.badge_id as string) ?? '',
+    memberId: extractTextValue(fields.member_id),
+    badgeId: extractTextValue(fields.badge_id),
     earnedAt: fields.earned_at ? new Date(fields.earned_at as string | number) : new Date(),
   };
 }
@@ -69,15 +69,6 @@ function parseStatus(value: unknown): Quest['status'] {
   return 'active';
 }
 
-function parseNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return 0;
-}
-
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
@@ -102,7 +93,7 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
   if (role === 'developer') {
     // For developers: filter completions to only those linked to active quests
     const questIds = [
-      ...new Set(completionRecords.map((r) => (r.fields.quest_id as string) ?? '')),
+      ...new Set(completionRecords.map((r) => extractTextValue(r.fields.quest_id))),
     ].filter((id) => id !== '');
 
     if (questIds.length === 0) {
@@ -119,7 +110,7 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
 
       // Count completions where the linked quest is active
       qualifyingCount = completionRecords.filter((cr) => {
-        const questId = (cr.fields.quest_id as string) ?? '';
+        const questId = extractTextValue(cr.fields.quest_id);
         const quest = questMap.get(questId);
         return quest?.status === 'active';
       }).length;
@@ -148,7 +139,7 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
   };
   const earnedRecords = await listRecords(TABLE_IDS.badgeEarned, earnedFilter);
   const earnedBadgeIds = new Set(
-    earnedRecords.map((r) => (r.fields.badge_id as string) ?? '')
+    earnedRecords.map((r) => extractTextValue(r.fields.badge_id))
   );
 
   // 5. Evaluate all badges in a single pass and award qualifying ones

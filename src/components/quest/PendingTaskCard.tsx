@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Quest } from '../../types';
+import type { Quest } from '../../types';
 import { canApproveReject } from '../../utils/permissions';
 import { validateRejectionReason } from '../../utils/validation';
 import { ValidationError } from '../shared';

@@ -1,4 +1,4 @@
-import { Quest, Member } from '../types';
+import type { Quest, Member } from '../types';
 
 /**
  * Returns true only if the quest is active (can be completed).

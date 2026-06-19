@@ -1,6 +1,37 @@
 import type { LarkFilter, LarkRecord, LarkSort } from '../types';
 import { LARK_CONFIG, RETRY_CONFIG } from './config';
 
+// ─── Lark Field Value Extraction ────────────────────────────────────────────
+
+/**
+ * Extracts a plain string from a Lark Bitable field value.
+ * Lark returns text fields as arrays: [{text: "value", type: "text"}]
+ * This handles both the array format and plain string format.
+ */
+export function extractTextValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.length > 0) {
+    const first = value[0];
+    if (typeof first === 'object' && first !== null && 'text' in first) {
+      return (first as { text: string }).text;
+    }
+    if (typeof first === 'string') return first;
+  }
+  return '';
+}
+
+/**
+ * Extracts a number from a Lark Bitable field value.
+ */
+export function extractNumberValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 // ─── Token Cache ────────────────────────────────────────────────────────────
 
 interface TokenCache {

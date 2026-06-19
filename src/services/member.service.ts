@@ -1,5 +1,5 @@
 import type { Member, LarkFilter, LarkRecord } from '../types';
-import { listRecords, getRecord } from './lark-api.service';
+import { listRecords, getRecord, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
@@ -11,11 +11,11 @@ function mapRecordToMember(record: LarkRecord): Member {
   const fields = record.fields;
   return {
     memberId: record.record_id,
-    displayName: (fields.display_name as string) ?? '',
-    openId: (fields.open_id as string) ?? '',
+    displayName: extractTextValue(fields.display_name),
+    openId: extractTextValue(fields.open_id),
     roles: parseRoles(fields.roles),
     primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
-    scrumMasterId: (fields.scrum_master_id as string) ?? null,
+    scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
   };
 }
 
@@ -66,7 +66,7 @@ export async function getCurrentMember(openId: string): Promise<Member> {
     throw new Error(`Member not found for open_id: ${openId}`);
   }
 
-  return mapRecordToMember(records[0]);
+  return mapRecordToMember(records[0]!);
 }
 
 /**
@@ -79,7 +79,8 @@ export async function getMemberById(memberId: string): Promise<Member> {
 
 /**
  * Resolves the assigned Scrum Master for a given developer.
- * Reads the developer's scrum_master_id field and fetches that member.
+ * The scrum_master_id field may contain either a record_id or an open_id.
+ * Tries record lookup first; if not found, searches by open_id.
  */
 export async function getScrumMasterForDeveloper(developerId: string): Promise<Member> {
   const developer = await getMemberById(developerId);
@@ -88,5 +89,23 @@ export async function getScrumMasterForDeveloper(developerId: string): Promise<M
     throw new Error(`Developer ${developerId} has no assigned Scrum Master`);
   }
 
+  // Try lookup by open_id (the field often stores open_id values)
+  const filter: LarkFilter = {
+    conjunction: 'and',
+    conditions: [
+      {
+        field_name: 'open_id',
+        operator: 'is',
+        value: [developer.scrumMasterId],
+      },
+    ],
+  };
+
+  const records = await listRecords(TABLE_IDS.members, filter);
+  if (records.length > 0) {
+    return mapRecordToMember(records[0]!);
+  }
+
+  // Fallback: try as record_id
   return getMemberById(developer.scrumMasterId);
 }
