@@ -2,9 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply bg-surface-100 text-surface-900 antialiased;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-400;
+  }
+}
+
+@layer components {
+
+  /* Card component base */
+  .card {
+    @apply rounded-xl border border-surface-200 bg-white p-5 shadow-card transition-shadow hover:shadow-card-hover;
+  }
+
+  /* Sidebar nav link */
+  .nav-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-surface-600 transition-all hover:bg-madrid-50 hover:text-madrid-700;
+  }
+
+  .nav-link-active {
+    @apply bg-madrid-50 text-madrid-700 font-semibold;
+  }
+
+  /* Badge pill */
+  .badge-pill {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
 @layer utilities {
   .animate-completion {
     animation: completion 1.5s ease-out forwards;
+  }
+
+  .animate-confetti-burst {
+    animation: confetti-burst 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  /* Text gradient for headings */
+  .text-gradient {
+    @apply bg-gradient-to-r from-madrid-700 to-madrid-500 bg-clip-text text-transparent;
   }
 }
 
@@ -13,19 +72,39 @@
     opacity: 0;
     transform: scale(0.5);
   }
+
   30% {
     opacity: 1;
     transform: scale(1.1);
   }
+
   50% {
     transform: scale(1);
   }
+
   80% {
     opacity: 1;
     transform: scale(1);
   }
+
   100% {
     opacity: 0;
     transform: scale(0.9);
+  }
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--confetti-tx), var(--confetti-ty)) rotate(var(--confetti-rot)) scale(0.3);
   }
 }
