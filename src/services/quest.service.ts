@@ -107,12 +107,15 @@ function mapRecordToCompletion(record: LarkRecord): QuestCompletion {
 function categorizeQuests(quests: Quest[], role: Role, memberId: string): CategorizedQuests {
   const result: CategorizedQuests = {};
 
-  // Separate by assignment type
-  const assignedToMe = quests.filter(
+  // Only active quests go into the main task lists — pending/rejected stay in pending section
+  const activeQuests = quests.filter((q) => q.status === 'active');
+
+  // Separate by assignment type (only active quests in these buckets)
+  const assignedToMe = activeQuests.filter(
     (q) => q.assignmentType === 'assigned' && q.assigneeId === memberId
   );
-  const openQuests = quests.filter((q) => q.assignmentType === 'open');
-  const teamQuests = quests.filter(
+  const openQuests = activeQuests.filter((q) => q.assignmentType === 'open');
+  const teamQuests = activeQuests.filter(
     (q) => q.assignmentType === 'all' || (q.assignmentType === 'assigned' && q.assigneeId === memberId)
   );
 
@@ -125,16 +128,22 @@ function categorizeQuests(quests: Quest[], role: Role, memberId: string): Catego
     if (daily.length > 0) result.daily = daily;
     if (milestones.length > 0) result.milestones = milestones;
   } else {
-    // Developer: active sprint tasks + pending tasks
-    const sprint = teamQuests.filter((q) => q.category === 'sprint' && q.status === 'active');
+    // Developer: active sprint tasks + pending tasks (from all quests, not just active)
+    const sprint = teamQuests.filter((q) => q.category === 'sprint');
     const pending = quests.filter((q) => q.status === 'pending');
 
     if (sprint.length > 0) result.sprint = sprint;
     if (pending.length > 0) result.pending = pending;
   }
 
-  // Add assigned tasks (specific to this user, across all categories)
-  if (assignedToMe.length > 0) result.assigned = assignedToMe;
+  // Add assigned tasks that aren't already in category lists (specific to this user)
+  const assignedNotInCategories = assignedToMe.filter((q) => {
+    if (role === 'agent') {
+      return !['onboarding', 'daily', 'milestone'].includes(q.category);
+    }
+    return q.category !== 'sprint';
+  });
+  if (assignedNotInCategories.length > 0) result.assigned = assignedNotInCategories;
 
   // Add open/optional tasks
   if (openQuests.length > 0) result.open = openQuests;
