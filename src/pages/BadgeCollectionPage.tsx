@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/app.store';
-import { BadgeGrid, ProgressBar } from '../components/badge';
+import { BadgeGrid } from '../components/badge';
 import { LoadingIndicator, ConfettiAnimation } from '../components/shared';
 
 export function BadgeCollectionPage() {
@@ -28,6 +28,12 @@ export function BadgeCollectionPage() {
     ? Math.round((badgeCollection.earnedCount / badgeCollection.totalCount) * 100)
     : 0;
 
+  // Next badge progress
+  const { nextBadge, nextBadgeProgress, nextBadgeRequired, qualifyingCompletions } = badgeCollection;
+  const nextBadgePercent = nextBadgeRequired > 0
+    ? Math.round((nextBadgeProgress / nextBadgeRequired) * 100)
+    : 100;
+
   return (
     <div className="space-y-6">
       {/* Confetti on badge unlock */}
@@ -39,7 +45,7 @@ export function BadgeCollectionPage() {
       {/* Header with progress ring */}
       <div className="card">
         <div className="flex flex-col items-center gap-6 sm:flex-row">
-          {/* Progress circle */}
+          {/* Progress circle - overall badge progress */}
           <div className="relative flex h-24 w-24 items-center justify-center flex-shrink-0">
             <svg className="h-24 w-24 -rotate-90" viewBox="0 0 96 96">
               <circle cx="48" cy="48" r="40" fill="none" strokeWidth="8" className="stroke-surface-100" />
@@ -53,32 +59,57 @@ export function BadgeCollectionPage() {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-xl font-bold text-surface-900">{progressPercent}%</span>
-              <span className="text-[10px] uppercase tracking-wide text-surface-500">Global</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Badges</span>
             </div>
           </div>
 
-          {/* Info */}
+          {/* Info + next badge progress */}
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-xl font-bold text-surface-900">Badge Collection</h1>
-            {badgeCollection.earnedCount === 0 ? (
-              <p className="mt-1 text-sm text-surface-500">
-                Start completing quests to earn your first badge!
-              </p>
+
+            {nextBadge ? (
+              <div className="mt-2">
+                <p className="text-sm text-surface-600">
+                  Next badge: <span className="font-semibold text-madrid-700">{nextBadge.name}</span>
+                </p>
+                <p className="mt-0.5 text-xs text-surface-400">
+                  {nextBadge.description}
+                </p>
+                {/* Next badge progress bar */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs text-surface-500 mb-1.5">
+                    <span className="font-medium uppercase tracking-wide">Progress</span>
+                    <span className="font-semibold text-surface-700">
+                      {qualifyingCompletions} / {nextBadgeRequired} quests
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-100">
+                    <div
+                      className="h-full rounded-full bg-madrid-500 transition-all duration-500"
+                      style={{ width: `${nextBadgePercent}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-surface-400">
+                    {nextBadgeRequired - qualifyingCompletions} more quest{nextBadgeRequired - qualifyingCompletions !== 1 ? 's' : ''} to unlock
+                  </p>
+                </div>
+              </div>
             ) : (
-              <p className="mt-1 text-sm text-surface-500">
-                You're making great progress. Keep completing quests to unlock more badges.
+              <p className="mt-2 text-sm text-madrid-600 font-medium">
+                🎉 All badges earned! You're a legend.
               </p>
             )}
-            <div className="mt-3">
-              <ProgressBar earned={badgeCollection.earnedCount} total={badgeCollection.totalCount} />
-            </div>
           </div>
 
-          {/* Badge count summary */}
+          {/* Stats summary */}
           <div className="flex gap-3 flex-shrink-0">
             <div className="flex flex-col items-center rounded-lg border border-surface-200 px-4 py-2">
+              <span className="text-lg font-bold text-madrid-600">{qualifyingCompletions}</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Quests</span>
+            </div>
+            <div className="flex flex-col items-center rounded-lg border border-surface-200 px-4 py-2">
               <span className="text-lg font-bold text-madrid-600">{badgeCollection.earnedCount}</span>
-              <span className="text-[10px] uppercase tracking-wide text-surface-500">Earned</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Badges</span>
             </div>
             <div className="flex flex-col items-center rounded-lg border border-surface-200 px-4 py-2">
               <span className="text-lg font-bold text-surface-600">{badgeCollection.totalCount}</span>
@@ -97,7 +128,7 @@ export function BadgeCollectionPage() {
           {roleLabel} Path
         </h2>
         <span className="badge-pill bg-madrid-100 text-madrid-700">
-          {badgeCollection.totalCount} Badges
+          {badgeCollection.earnedCount} / {badgeCollection.totalCount} Badges
         </span>
       </div>
 
