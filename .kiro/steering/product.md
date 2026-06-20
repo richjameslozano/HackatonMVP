@@ -23,3 +23,19 @@ The system turns onboarding steps, daily tasks, and sprint work into quests. Emp
 ## Architecture Summary
 
 Frontend-only MVP (React SPA) connected to Lark Base via the Lark Base API. No separate backend server. Lark Base is the single source of truth. A Lark Bot handles notifications.
+
+## Quest Assignment Types
+
+Each quest has an `assignment_type` field that controls who can see and complete it:
+
+- **`all`** — Everyone with the matching role sees it and can complete it. Used for standard quests like "Complete onboarding step 1" that every agent must do.
+- **`assigned`** — Only the specific person in `assignee_id` sees it. Used for developer sprint tasks — when a developer proposes a task, it's assigned to them specifically. Nobody else can complete it.
+- **`open`** — Everyone sees it, but it's optional/claimable. Combined with `completion_mode`:
+  - `multiple` — anyone can complete it (group quest)
+  - `first-claim` — first person to complete it "claims" it, blocking others
+
+## Quest Statuses
+
+- **`active`** — Quest is available for completion
+- **`pending`** — Developer-proposed task awaiting Scrum Master approval
+- **`rejected`** — Task was rejected by Scrum Master (or withdrawn by proposer)

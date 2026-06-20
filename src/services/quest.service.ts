@@ -154,8 +154,17 @@ function mapRecordToCompletion(record: LarkRecord): QuestCompletion {
  * Categorizes a list of quests into the CategorizedQuests structure.
  * Handles assignment types: 'all' (everyone), 'assigned' (specific person), 'open' (optional/claimable).
  * Assumes quests are already filtered to be visible to this role.
+ * 
+ * Pending quests are filtered to show only:
+ * - Quests proposed by the current user (their own proposals)
+ * - If user is a scrum master: quests proposed by developers under them
  */
-function categorizeQuests(quests: Quest[], role: Role, memberId: string): CategorizedQuests {
+function categorizeQuests(
+  quests: Quest[],
+  role: Role,
+  memberId: string,
+  managedDeveloperIds: string[] = []
+): CategorizedQuests {
   const result: CategorizedQuests = {};
 
   // Only active quests go into the main task lists — pending/rejected stay in pending section
@@ -179,9 +188,15 @@ function categorizeQuests(quests: Quest[], role: Role, memberId: string): Catego
     if (daily.length > 0) result.daily = daily;
     if (milestones.length > 0) result.milestones = milestones;
   } else {
-    // Developer: active sprint tasks + pending tasks (from all quests, not just active)
+    // Developer: active sprint tasks + pending tasks (filtered by ownership/SM relationship)
     const sprint = teamQuests.filter((q) => q.category === 'sprint');
-    const pending = quests.filter((q) => q.status === 'pending');
+    // Only show pending quests that:
+    // 1. Were proposed by the current user (their own proposals), OR
+    // 2. Were proposed by developers managed by this user (if they're a scrum master)
+    const visibleProposerIds = new Set([memberId, ...managedDeveloperIds]);
+    const pending = quests.filter(
+      (q) => q.status === 'pending' && q.proposerId && visibleProposerIds.has(q.proposerId)
+    );
     // Rejected tasks (non-withdrawn) proposed by this developer
     const rejected = quests.filter(
       (q) => q.status === 'rejected' && !q.withdrawn && q.proposerId === memberId
@@ -212,8 +227,13 @@ function categorizeQuests(quests: Quest[], role: Role, memberId: string): Catego
 /**
  * Fetches quests filtered by target_role (role-specific + 'all') and categorizes them.
  * Fetches all quests and filters client-side to handle 'all' target_role.
+ * @param managedDeveloperIds - IDs of developers managed by this user (if they're a SM)
  */
-export async function getQuestsForRole(role: Role, memberId: string): Promise<CategorizedQuests> {
+export async function getQuestsForRole(
+  role: Role,
+  memberId: string,
+  managedDeveloperIds: string[] = []
+): Promise<CategorizedQuests> {
   // Fetch quests matching this role
   const roleFilter: LarkFilter = {
     conjunction: 'and',
@@ -248,7 +268,7 @@ export async function getQuestsForRole(role: Role, memberId: string): Promise<Ca
 
   const quests = Array.from(recordMap.values()).map(mapRecordToQuest);
 
-  return categorizeQuests(quests, role, memberId);
+  return categorizeQuests(quests, role, memberId, managedDeveloperIds);
 }
 
 /**
