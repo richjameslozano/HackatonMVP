@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useAppStore } from '../store/app.store';
-import { QuestCategory, PendingTaskCard, ProposeTaskForm } from '../components/quest';
+import { QuestCategory, PendingTaskCard, ProposeTaskForm, ResubmitTaskModal } from '../components/quest';
 import { LoadingIndicator, CompletionAnimation, ConfirmationToast, ConfettiAnimation } from '../components/shared';
+import { canResubmitTask } from '../utils/permissions';
+import type { Quest } from '../types';
 
 interface ToastState {
   message: string;
@@ -21,6 +23,9 @@ export function QuestBoardPage() {
   const storeProposeTask = useAppStore((s) => s.proposeTask);
   const storeApproveTask = useAppStore((s) => s.approveTask);
   const storeRejectTask = useAppStore((s) => s.rejectTask);
+  const storeEditPendingTask = useAppStore((s) => s.editPendingTask);
+  const storeWithdrawTask = useAppStore((s) => s.withdrawTask);
+  const storeResubmitTask = useAppStore((s) => s.resubmitTask);
   const clearCompletionFeedback = useAppStore((s) => s.clearCompletionFeedback);
   const clearNotificationWarning = useAppStore((s) => s.clearNotificationWarning);
   const newBadgeUnlocked = useAppStore((s) => s.newBadgeUnlocked);
@@ -28,6 +33,7 @@ export function QuestBoardPage() {
   const isScrumMaster = useAppStore((s) => s.isScrumMaster);
 
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [resubmitQuest, setResubmitQuest] = useState<Quest | null>(null);
 
   const handleComplete = useCallback(
     async (questId: string) => {
@@ -76,11 +82,46 @@ export function QuestBoardPage() {
     [storeRejectTask],
   );
 
+  const handleEditPendingTask = useCallback(
+    async (questId: string, title: string, description: string) => {
+      try {
+        await storeEditPendingTask(questId, title, description);
+        setToast({ message: 'Task updated successfully!', type: 'success' });
+      } catch {
+        setToast({ message: 'Failed to update task. Please try again.', type: 'warning' });
+      }
+    },
+    [storeEditPendingTask],
+  );
+
+  const handleWithdrawTask = useCallback(
+    async (questId: string) => {
+      try {
+        await storeWithdrawTask(questId);
+        setToast({ message: 'Task withdrawn.', type: 'success' });
+      } catch {
+        setToast({ message: 'Failed to withdraw task. Please try again.', type: 'warning' });
+      }
+    },
+    [storeWithdrawTask],
+  );
+
+  const handleResubmitTask = useCallback(
+    async (originalQuestId: string, title: string, description: string) => {
+      try {
+        await storeResubmitTask(originalQuestId, title, description);
+        setToast({ message: 'Task resubmitted for review!', type: 'success' });
+        setResubmitQuest(null);
+      } catch {
+        setToast({ message: 'Failed to resubmit task. Please try again.', type: 'warning' });
+      }
+    },
+    [storeResubmitTask],
+  );
+
   if (questsLoading) {
     return <LoadingIndicator size="lg" message="Loading quests..." />;
   }
-
-  const roleLabel = selectedRole === 'agent' ? 'Agent' : 'Developer';
 
   return (
     <div className="space-y-6">
@@ -268,13 +309,68 @@ export function QuestBoardPage() {
                         proposerName={quest.proposerId === currentMember?.memberId ? currentMember?.displayName : undefined}
                         onApprove={handleApprove}
                         onReject={handleReject}
+                        onEdit={handleEditPendingTask}
+                        onWithdraw={handleWithdrawTask}
                       />
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* Rejected Tasks — shows rejected tasks proposed by current user */}
+              {(quests?.rejected ?? []).length > 0 && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    <h3 className="text-base font-semibold text-surface-900">Rejected Tasks</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {(quests?.rejected ?? []).map((quest) => (
+                      <div
+                        key={quest.questId}
+                        className="rounded-xl border border-red-100 bg-red-50/50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-surface-900">{quest.title}</h4>
+                            {quest.description && (
+                              <p className="mt-1 text-xs text-surface-500 line-clamp-2">{quest.description}</p>
+                            )}
+                            {quest.rejectionReason && (
+                              <p className="mt-2 text-xs text-red-600">
+                                <span className="font-medium">Reason:</span> {quest.rejectionReason}
+                              </p>
+                            )}
+                          </div>
+                          {canResubmitTask(quest, currentMember?.memberId ?? '') && (
+                            <button
+                              type="button"
+                              onClick={() => setResubmitQuest(quest)}
+                              className="flex-shrink-0 rounded-lg border border-madrid-200 bg-madrid-50 px-3 py-1.5 text-xs font-medium text-madrid-700 transition-colors hover:bg-madrid-100"
+                              aria-label={`Resubmit task: ${quest.title}`}
+                            >
+                              Resubmit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Resubmit Task Modal */}
+          {resubmitQuest && (
+            <ResubmitTaskModal
+              quest={resubmitQuest}
+              onSubmit={handleResubmitTask}
+              onClose={() => setResubmitQuest(null)}
+            />
+          )}
         </>
       )}
     </div>

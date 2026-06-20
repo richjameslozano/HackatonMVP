@@ -381,16 +381,16 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Filter by user, action type, or date range
     - Export audit data for reporting
 
-- [ ] 21. Developer Task Proposal Flow Enhancements
-  - [ ] 21.1 Add task editing for pending proposals
+- [x] 21. Developer Task Proposal Flow Enhancements
+  - [x] 21.1 Add task editing for pending proposals
     - Allow proposer to edit title/description while task is pending
     - Show edit history in task details
     - Notify Scrum Master of edits
-  - [ ] 21.2 Add task deletion for pending proposals
+  - [x] 21.2 Add task deletion for pending proposals
     - Allow proposer to withdraw/delete pending tasks
     - Remove from pending list and notify Scrum Master
     - Log deletion in audit trail
-  - [ ] 21.3 Add task resubmission after rejection
+  - [x] 21.3 Add task resubmission after rejection
     - Allow developer to revise and resubmit rejected tasks
     - Show previous rejection reason for reference
     - Create new quest record with link to original

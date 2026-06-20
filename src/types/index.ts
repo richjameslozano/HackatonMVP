@@ -23,6 +23,12 @@ export interface Member {
   scrumMasterId: string | null;
 }
 
+export interface QuestEditHistoryEntry {
+  title: string;
+  description: string;
+  editedAt: Date;
+}
+
 export interface Quest {
   questId: string;
   title: string;
@@ -35,6 +41,10 @@ export interface Quest {
   completionMode: CompletionMode;
   proposerId: string | null;
   createdAt: Date;
+  rejectionReason?: string;
+  originalQuestId?: string | null;
+  editHistory?: QuestEditHistoryEntry[];
+  withdrawn?: boolean;
 }
 
 export interface QuestCompletion {
@@ -68,6 +78,7 @@ export interface CategorizedQuests {
   milestones?: Quest[];
   sprint?: Quest[];
   pending?: Quest[];
+  rejected?: Quest[];
   open?: Quest[];
   assigned?: Quest[];
 }

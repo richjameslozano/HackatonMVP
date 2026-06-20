@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { Quest } from '../../types';
-import { canApproveReject } from '../../utils/permissions';
+import { canApproveReject, canEditPendingTask } from '../../utils/permissions';
 import { validateRejectionReason } from '../../utils/validation';
 import { ValidationError } from '../shared';
+import { EditTaskModal } from './EditTaskModal';
 
 interface PendingTaskCardProps {
   quest: Quest;
@@ -11,6 +12,8 @@ interface PendingTaskCardProps {
   proposerName?: string;
   onApprove: (questId: string) => void;
   onReject: (questId: string, reason: string) => void;
+  onEdit?: (questId: string, title: string, description: string) => Promise<void>;
+  onWithdraw?: (questId: string) => Promise<void>;
 }
 
 export function PendingTaskCard({
@@ -20,13 +23,19 @@ export function PendingTaskCard({
   proposerName,
   onApprove,
   onReject,
+  onEdit,
+  onWithdraw,
 }: PendingTaskCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonTouched, setReasonTouched] = useState(false);
   const [mode, setMode] = useState<'review' | 'reject'>('review');
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const canReview = canApproveReject(currentMemberId, quest, isScrumMaster);
+  const canEdit = canEditPendingTask(quest, currentMemberId);
   const reasonValidation = validateRejectionReason(reason);
 
   function handleOpenModal() {
@@ -60,6 +69,17 @@ export function PendingTaskCard({
     setMode('review');
   }
 
+  async function handleWithdraw() {
+    if (!onWithdraw || withdrawing) return;
+    setWithdrawing(true);
+    try {
+      await onWithdraw(quest.questId);
+      setShowWithdrawConfirm(false);
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+
   return (
     <>
       {/* Card */}
@@ -77,21 +97,56 @@ export function PendingTaskCard({
             )}
           </div>
 
-          {/* Review button — only visible to scrum master */}
-          {canReview && (
-            <button
-              type="button"
-              onClick={handleOpenModal}
-              className="flex-shrink-0 rounded-lg border border-madrid-200 bg-madrid-50 px-3 py-1.5 text-xs font-medium text-madrid-700 transition-colors hover:bg-madrid-100"
-              aria-label={`Review task: ${quest.title}`}
-            >
-              Review
-            </button>
-          )}
+          {/* Action buttons */}
+          <div className="flex flex-shrink-0 gap-1.5">
+            {/* Edit/Withdraw buttons — visible to the proposer */}
+            {canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={() => setShowEditModal(true)}
+                className="rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-xs font-medium text-surface-600 transition-colors hover:bg-surface-50"
+                aria-label={`Edit task: ${quest.title}`}
+              >
+                Edit
+              </button>
+            )}
+            {canEdit && onWithdraw && (
+              <button
+                type="button"
+                onClick={() => setShowWithdrawConfirm(true)}
+                className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                aria-label={`Withdraw task: ${quest.title}`}
+              >
+                Withdraw
+              </button>
+            )}
+            {/* Review button — visible to scrum master (who is not the proposer) */}
+            {canReview && !canEdit && (
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="rounded-lg border border-madrid-200 bg-madrid-50 px-3 py-1.5 text-xs font-medium text-madrid-700 transition-colors hover:bg-madrid-100"
+                aria-label={`Review task: ${quest.title}`}
+              >
+                Review
+              </button>
+            )}
+            {/* If user is both SM and proposer, show Review alongside Edit/Withdraw */}
+            {canReview && canEdit && (
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="rounded-lg border border-madrid-200 bg-madrid-50 px-3 py-1.5 text-xs font-medium text-madrid-700 transition-colors hover:bg-madrid-100"
+                aria-label={`Review task: ${quest.title}`}
+              >
+                Review
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Status for non-scrum-masters */}
-        {!canReview && (
+        {/* Status for non-action users */}
+        {!canReview && !canEdit && (
           <p className="mt-2 text-xs text-surface-400 italic">Awaiting Scrum Master approval</p>
         )}
       </div>
@@ -216,6 +271,56 @@ export function PendingTaskCard({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditModal && onEdit && (
+        <EditTaskModal
+          quest={quest}
+          onSubmit={onEdit}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
+      {/* Withdraw Confirmation Dialog */}
+      {showWithdrawConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`withdraw-title-${quest.questId}`}
+        >
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowWithdrawConfirm(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-sm rounded-2xl border border-surface-200 bg-white p-6 shadow-elevated animate-fade-slide-up">
+            <h3 id={`withdraw-title-${quest.questId}`} className="text-lg font-semibold text-surface-900">
+              Withdraw Task?
+            </h3>
+            <p className="mt-2 text-sm text-surface-600">
+              Are you sure you want to withdraw "{quest.title}"? This will remove it from the pending list.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={withdrawing}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {withdrawing ? 'Withdrawing…' : 'Withdraw'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowWithdrawConfirm(false)}
+                className="flex-1 rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 transition-colors hover:bg-surface-50"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

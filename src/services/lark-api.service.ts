@@ -10,27 +10,27 @@ import { getTenantToken, withRetry, createTimeoutSignal } from './auth.service';
  * This handles both the array format and plain string format.
  */
 export function extractTextValue(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value) && value.length > 0) {
-    const first = value[0];
-    if (typeof first === 'object' && first !== null && 'text' in first) {
-      return (first as { text: string }).text;
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value) && value.length > 0) {
+        const first = value[0];
+        if (typeof first === 'object' && first !== null && 'text' in first) {
+            return (first as { text: string }).text;
+        }
+        if (typeof first === 'string') return first;
     }
-    if (typeof first === 'string') return first;
-  }
-  return '';
+    return '';
 }
 
 /**
  * Extracts a number from a Lark Bitable field value.
  */
 export function extractNumberValue(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return 0;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = parseInt(value, 10);
+        if (!isNaN(parsed)) return parsed;
+    }
+    return 0;
 }
 
 // ─── URL Construction ───────────────────────────────────────────────────────
@@ -223,12 +223,52 @@ export async function updateRecord(
             const data = (await response.json()) as {
                 code: number;
                 msg: string;
-                data: { record: { record_id: string; fields: Record<string, unknown> } };
+                data?: { record?: { record_id: string; fields: Record<string, unknown> } };
             };
 
+            if (data.code !== 0) {
+                throw new Error(`updateRecord API error: ${data.msg} (code ${data.code})`);
+            }
+
+            // Lark API may not always return the full record in the response
+            if (data.data?.record) {
+                return {
+                    record_id: data.data.record.record_id,
+                    fields: data.data.record.fields,
+                };
+            }
+
+            // Fallback: re-fetch the record to get the updated state
+            const refetchUrl = `${getBaseTableUrl(tableId)}/${recordId}`;
+            const { signal: refetchSignal, cleanup: refetchCleanup } = createTimeoutSignal();
+            try {
+                const refetchResponse = await fetch(refetchUrl, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    signal: refetchSignal,
+                });
+                if (refetchResponse.ok) {
+                    const refetchData = (await refetchResponse.json()) as {
+                        data?: { record?: { record_id: string; fields: Record<string, unknown> } };
+                    };
+                    if (refetchData.data?.record) {
+                        return {
+                            record_id: refetchData.data.record.record_id,
+                            fields: refetchData.data.record.fields,
+                        };
+                    }
+                }
+            } finally {
+                refetchCleanup();
+            }
+
+            // Last resort: return what we know
             return {
-                record_id: data.data.record.record_id,
-                fields: data.data.record.fields,
+                record_id: recordId,
+                fields,
             };
         } finally {
             cleanup();

@@ -123,3 +123,59 @@ export async function notifyRejection(
 
   return { success: true };
 }
+
+/**
+ * Sends a notification to the Scrum Master that a pending task was edited by the developer.
+ *
+ * Never throws. Returns a NotificationResult indicating success or a warning.
+ */
+export async function notifyTaskEdit(
+  quest: Quest,
+  developer: Member,
+  scrumMaster: Member
+): Promise<NotificationResult> {
+  const recipientError = validateRecipient(scrumMaster);
+  if (recipientError) return recipientError;
+
+  const text = `📝 Task updated: "${quest.title}" was edited by ${developer.displayName}. Please review the changes.`;
+  const message = buildTextMessage(text);
+
+  const result = await sendMessage(scrumMaster.openId, message);
+
+  if (!result.success) {
+    return {
+      success: false,
+      warning: `Failed to notify Scrum Master "${scrumMaster.displayName}": ${result.error ?? 'Unknown error'}`,
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Sends a notification to the Scrum Master that a pending task was withdrawn by the developer.
+ *
+ * Never throws. Returns a NotificationResult indicating success or a warning.
+ */
+export async function notifyTaskWithdrawal(
+  quest: Quest,
+  developer: Member,
+  scrumMaster: Member
+): Promise<NotificationResult> {
+  const recipientError = validateRecipient(scrumMaster);
+  if (recipientError) return recipientError;
+
+  const text = `🗑️ Task withdrawn: "${quest.title}" was withdrawn by ${developer.displayName}.`;
+  const message = buildTextMessage(text);
+
+  const result = await sendMessage(scrumMaster.openId, message);
+
+  if (!result.success) {
+    return {
+      success: false,
+      warning: `Failed to notify Scrum Master "${scrumMaster.displayName}": ${result.error ?? 'Unknown error'}`,
+    };
+  }
+
+  return { success: true };
+}

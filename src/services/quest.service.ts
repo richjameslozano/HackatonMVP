@@ -1,6 +1,7 @@
 import type {
   Quest,
   QuestCompletion,
+  QuestEditHistoryEntry,
   CategorizedQuests,
   Role,
   TargetRole,
@@ -17,10 +18,55 @@ import { canCompleteQuest } from '../utils/permissions';
 // ─── Record Mapping ─────────────────────────────────────────────────────────
 
 /**
+ * Extracts a value from a Lark field that could be a text field, a link/lookup field
+ * (array of objects with record_id), or a plain string.
+ * Handles: string, [{text: "val"}], [{record_id: "recXXX"}], ["recXXX"]
+ */
+function extractLinkOrTextValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.length > 0) {
+    const first = value[0];
+    if (typeof first === 'string') return first;
+    if (typeof first === 'object' && first !== null) {
+      // Link field format: {record_id: "recXXX", ...}
+      if ('record_id' in first) return (first as { record_id: string }).record_id;
+      // Alternative link format
+      if ('id' in first) return (first as { id: string }).id;
+      // Text field format: {text: "value", type: "text"}
+      if ('text' in first) return (first as { text: string }).text;
+    }
+  }
+  return '';
+}
+
+/**
  * Maps a raw Lark record to a Quest domain object.
  */
 function mapRecordToQuest(record: LarkRecord): Quest {
   const fields = record.fields;
+
+  // Parse edit history from JSON string
+  let editHistory: QuestEditHistoryEntry[] | undefined;
+  const rawEditHistory = extractTextValue(fields.edit_history);
+  if (rawEditHistory) {
+    try {
+      const parsed = JSON.parse(rawEditHistory);
+      if (Array.isArray(parsed)) {
+        editHistory = parsed.map((entry: { title: string; description: string; editedAt: string }) => ({
+          title: entry.title,
+          description: entry.description,
+          editedAt: new Date(entry.editedAt),
+        }));
+      }
+    } catch {
+      // Ignore invalid JSON
+    }
+  }
+
+  // Parse withdrawn boolean
+  const rawWithdrawn = fields.withdrawn;
+  const withdrawn = rawWithdrawn === true || extractTextValue(rawWithdrawn) === 'true';
+
   return {
     questId: record.record_id,
     title: extractTextValue(fields.title),
@@ -29,10 +75,14 @@ function mapRecordToQuest(record: LarkRecord): Quest {
     targetRole: parseTargetRole(extractTextValue(fields.target_role) || fields.target_role),
     status: parseStatus(extractTextValue(fields.status) || fields.status),
     assignmentType: parseAssignmentType(extractTextValue(fields.assignment_type) || fields.assignment_type),
-    assigneeId: extractTextValue(fields.assignee_id) || null,
+    assigneeId: extractLinkOrTextValue(fields.assignee_id) || null,
     completionMode: parseCompletionMode(extractTextValue(fields.completion_mode) || fields.completion_mode),
-    proposerId: extractTextValue(fields.proposer_id) || null,
+    proposerId: extractLinkOrTextValue(fields.proposer_id) || null,
     createdAt: fields.created_at ? new Date(fields.created_at as string | number) : new Date(),
+    rejectionReason: extractTextValue(fields.rejection_reason) || undefined,
+    originalQuestId: extractTextValue(fields.original_quest_id) || null,
+    editHistory,
+    withdrawn,
   };
 }
 
@@ -132,9 +182,14 @@ function categorizeQuests(quests: Quest[], role: Role, memberId: string): Catego
     // Developer: active sprint tasks + pending tasks (from all quests, not just active)
     const sprint = teamQuests.filter((q) => q.category === 'sprint');
     const pending = quests.filter((q) => q.status === 'pending');
+    // Rejected tasks (non-withdrawn) proposed by this developer
+    const rejected = quests.filter(
+      (q) => q.status === 'rejected' && !q.withdrawn && q.proposerId === memberId
+    );
 
     if (sprint.length > 0) result.sprint = sprint;
     if (pending.length > 0) result.pending = pending;
+    if (rejected.length > 0) result.rejected = rejected;
   }
 
   // Add assigned tasks that aren't already in category lists (specific to this user)
@@ -273,6 +328,7 @@ export async function rejectTask(
 
   const updatedRecord = await updateRecord(TABLE_IDS.quests, questId, {
     status: 'rejected',
+    rejection_reason: reason.trim(),
   });
 
   return mapRecordToQuest(updatedRecord);
@@ -346,4 +402,134 @@ export async function completeQuest(
 
   const completionRecord = await createRecord(TABLE_IDS.questCompletions, completionFields);
   return mapRecordToCompletion(completionRecord);
+}
+
+// ─── Task Proposal Flow Enhancements ────────────────────────────────────────
+
+/**
+ * Edits a pending task's title and/or description.
+ * Only the proposer can edit. Task must be in 'pending' status.
+ * Stores previous values in edit_history field (JSON stringified).
+ */
+export async function editPendingTask(
+  questId: string,
+  title: string,
+  description: string,
+  developerId: string
+): Promise<Quest> {
+  const titleValidation = validateTaskTitle(title);
+  if (!titleValidation.valid) {
+    throw new Error(titleValidation.error ?? 'Invalid title');
+  }
+
+  const descValidation = validateTaskDescription(description);
+  if (!descValidation.valid) {
+    throw new Error(descValidation.error ?? 'Invalid description');
+  }
+
+  const record = await getRecord(TABLE_IDS.quests, questId);
+  const quest = mapRecordToQuest(record);
+
+  if (quest.status !== 'pending') {
+    throw new Error(`Cannot edit quest with status '${quest.status}' — must be 'pending'`);
+  }
+
+  if (quest.proposerId !== developerId) {
+    throw new Error('Only the proposer can edit a pending task');
+  }
+
+  // Build edit history entry with previous values
+  const previousEntry: QuestEditHistoryEntry = {
+    title: quest.title,
+    description: quest.description,
+    editedAt: new Date(),
+  };
+
+  const existingHistory = quest.editHistory ?? [];
+  const updatedHistory = [...existingHistory, previousEntry];
+
+  const updatedRecord = await updateRecord(TABLE_IDS.quests, questId, {
+    title: title.trim(),
+    description: description.trim(),
+    edit_history: JSON.stringify(updatedHistory),
+  });
+
+  return mapRecordToQuest(updatedRecord);
+}
+
+/**
+ * Withdraws/deletes a pending task.
+ * Only the proposer can withdraw. Task must be in 'pending' status.
+ * Sets status to 'rejected' and marks as withdrawn (soft delete).
+ */
+export async function withdrawPendingTask(
+  questId: string,
+  developerId: string
+): Promise<void> {
+  const record = await getRecord(TABLE_IDS.quests, questId);
+  const quest = mapRecordToQuest(record);
+
+  if (quest.status !== 'pending') {
+    throw new Error(`Cannot withdraw quest with status '${quest.status}' — must be 'pending'`);
+  }
+
+  if (quest.proposerId !== developerId) {
+    throw new Error('Only the proposer can withdraw a pending task');
+  }
+
+  await updateRecord(TABLE_IDS.quests, questId, {
+    status: 'rejected',
+    withdrawn: 'true',
+    rejection_reason: 'Withdrawn by proposer',
+  });
+}
+
+/**
+ * Resubmits a rejected task as a new proposal with a link to the original.
+ * Validates the new title/description and creates a new quest record.
+ */
+export async function resubmitTask(
+  originalQuestId: string,
+  title: string,
+  description: string,
+  developerId: string
+): Promise<Quest> {
+  const titleValidation = validateTaskTitle(title);
+  if (!titleValidation.valid) {
+    throw new Error(titleValidation.error ?? 'Invalid title');
+  }
+
+  const descValidation = validateTaskDescription(description);
+  if (!descValidation.valid) {
+    throw new Error(descValidation.error ?? 'Invalid description');
+  }
+
+  // Verify original quest exists and was rejected
+  const originalRecord = await getRecord(TABLE_IDS.quests, originalQuestId);
+  const originalQuest = mapRecordToQuest(originalRecord);
+
+  if (originalQuest.status !== 'rejected') {
+    throw new Error(`Cannot resubmit quest with status '${originalQuest.status}' — must be 'rejected'`);
+  }
+
+  if (originalQuest.proposerId !== developerId) {
+    throw new Error('Only the original proposer can resubmit a rejected task');
+  }
+
+  const fields: Record<string, unknown> = {
+    title: title.trim(),
+    description: description.trim(),
+    category: 'sprint',
+    target_role: 'developer',
+    status: 'pending',
+    assignment_type: 'assigned',
+    assignee_id: developerId,
+    completion_mode: 'multiple',
+    proposer_id: developerId,
+    original_quest_id: originalQuestId,
+    created_at: Date.now(),
+  };
+
+  const record = await createRecord(TABLE_IDS.quests, fields);
+  return mapRecordToQuest(record);
 }
