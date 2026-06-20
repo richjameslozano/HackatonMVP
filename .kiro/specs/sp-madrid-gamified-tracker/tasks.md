@@ -312,34 +312,33 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
 ```
 
 
-## Additional Tasks (Post-MVP Enhancements)
 
-- [ ] 16. Implement RBAC (Role-Based Access Control)
-  - [ ] 16.1 Enforce route-level access control based on member roles
+- [x] 16. Implement Account Handling (Login/Session via Lark OAuth)
+  - [x] 16.1 Implement Lark OAuth login flow
+    - Build `LoginPage.tsx` with Lark OAuth redirect
+    - Build `AuthCallbackPage.tsx` to handle OAuth callback and token exchange
+    - Implement `oauth.service.ts` for authorization URL and token exchange
+    - Implement `credential-store.ts` for secure token storage
+    - Implement `auth.store.ts` for auth state management
+  - [x] 16.2 Add session persistence and restoration
+    - Store credentials in sessionStorage
+    - Restore session on app load via `restoreSession()`
+    - Auto-redirect to login if session is invalid
+  - [x] 16.3 Add AuthGuard for protected routes
+    - Redirect unauthenticated users to `/login`
+    - Show loading spinner during session restore
+    - Redirect to `/onboarding` for first-time users
+
+- [ ] 17. Implement RBAC (Role-Based Access Control)
+  - [~] 17.1 Enforce route-level access control based on member roles
     - Restrict Scrum Master actions (approve/reject) to users with scrum_master role
     - Prevent developers from accessing admin-level operations
     - Show/hide UI elements based on role permissions
     - Redirect unauthorized users to appropriate pages
-  - [ ] 16.2 Add role guards to service layer
+  - [~] 17.2 Add role guards to service layer
     - Validate role permissions before write operations (approve, reject, propose)
     - Return clear error messages for unauthorized actions
     - Prevent privilege escalation via direct API manipulation
-
-- [ ] 17. Implement Account Handling (Login/Session)
-  - [ ] 17.1 Create login/member selection page
-    - Fetch all members from Lark Base Members table
-    - Display member list with name and role(s)
-    - Allow user to select their identity
-    - Store selected member in sessionStorage
-    - Redirect to quest board after selection
-  - [ ] 17.2 Add logout functionality
-    - Clear sessionStorage on logout
-    - Redirect to login/selection page
-    - Add logout button to navigation bar
-  - [ ] 17.3 Add session persistence and validation
-    - On app load, check sessionStorage for existing session
-    - Validate stored member still exists in Lark Base
-    - Auto-redirect to login if session is invalid or expired
 
 - [x] 18. Leaderboard Updates and Enhancements
   - [x] 18.1 Add real-time leaderboard refresh
@@ -367,16 +366,16 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Apply consistent design system if available
 
 - [ ] 20. Error Handling and Audit Logs
-  - [ ] 20.1 Implement error tracking and display
+  - [~] 20.1 Implement error tracking and display
     - Add global error boundary component
     - Display user-friendly error messages with retry options
     - Log errors to console with structured format
-  - [ ] 20.2 Implement audit log table in Lark Base
+  - [~] 20.2 Implement audit log table in Lark Base
     - Create Audit_Logs table (timestamp, user_id, action, details, status)
     - Log all write operations (quest completion, task proposal, approve, reject)
     - Log authentication events (login, logout)
     - Log errors and failures with context
-  - [ ] 20.3 Add audit log viewer (optional admin feature)
+  - [~] 20.3 Add audit log viewer (optional admin feature)
     - Display recent audit entries in a table
     - Filter by user, action type, or date range
     - Export audit data for reporting
@@ -394,3 +393,48 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
     - Allow developer to revise and resubmit rejected tasks
     - Show previous rejection reason for reference
     - Create new quest record with link to original
+
+- [x] 22. Scrum Master Command Center (Team Progress Dashboard)
+  - [x] 22.1 Implement team progress service (`src/services/team-progress.service.ts`)
+    - `getTeamOverview(scrumMasterId)` — fetch all developers managed by this SM, their quest counts, completion counts, and statuses
+    - `getDeveloperDetail(developerId)` — fetch detailed task breakdown for a specific developer
+    - `getTeamStats(scrumMasterId)` — compute summary stats: total devs, total tasks, active/pending/rejected/blocked counts, completion percentage
+    - `getTaskDistribution(scrumMasterId)` — compute task distribution breakdown (completed/in-progress/for-review/blocked percentages)
+    - `getRecentActivity(scrumMasterId)` — fetch recent quest completions, proposals, and status changes from managed developers
+  - [x] 22.2 Implement Command Center page (`src/pages/CommandCenterPage.tsx`)
+    - Only accessible when user `isScrumMaster` is true
+    - Summary stats bar at top: Devs count, Total Tasks, Active, Pending, Rejected, Blocked, Completion %
+    - Overall Team Progress section with large progress bar and percentage
+    - Show backlog remaining count and goal
+    - Layout: main content (left 2/3) + sidebar (right 1/3)
+  - [x] 22.3 Implement Developer Progress Overview component (`src/components/command-center/DeveloperProgressTable.tsx`)
+    - Table with columns: Developer (avatar + name + role), Tasks (count + blocked indicator), Status Summary (colored dots), Progress (bar + percentage), Action (View Details button)
+    - Each row shows per-developer aggregated data
+    - "Download CSV" export button in header
+    - Sort by developer name or completion %
+  - [x] 22.4 Implement Blockers & Risks panel (`src/components/command-center/BlockersPanel.tsx`)
+    - High Priority section: developers with blocked tasks and reason
+    - Inactivity section: developers with no activity for N days
+    - Color-coded severity (red for high priority, amber for inactivity)
+  - [x] 22.5 Implement Recent Activity feed (`src/components/command-center/RecentActivityFeed.tsx`)
+    - Chronological feed of team events: completions, submissions, edits, status changes
+    - Each entry: icon (colored by type), developer name, action description, timestamp
+    - "Load Older Activity" button for pagination
+    - Floating "+" action button (for quick actions like assigning tasks)
+  - [x] 22.6 Implement Task Distribution chart (`src/components/command-center/TaskDistribution.tsx`)
+    - Horizontal bar chart showing: Completed %, In Progress %, For Review %, Blocked %
+    - Color-coded bars matching status colors
+  - [x] 22.7 Implement Pending Reviews widget (`src/components/command-center/PendingReviews.tsx`)
+    - Show count badge ("3 NEW")
+    - List of pending tasks with title, proposer name, time since submission
+    - "View All Reviews" link to navigate to quest board pending section
+    - Clicking a task opens the review modal
+  - [x] 22.8 Add Command Center route and navigation
+    - Add `/command-center` route (protected, only for SM users)
+    - Add "Command Center" link in sidebar/navigation (visible only when `isScrumMaster`)
+    - Hide nav link for non-SM users
+  - [x] 22.9 Implement Developer Detail modal/page
+    - Triggered by "View Details" button in the progress table
+    - Shows full task list for that developer with statuses
+    - Allows inline approve/reject of pending tasks
+    - Shows completion history and badge progress

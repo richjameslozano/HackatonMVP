@@ -7,6 +7,7 @@ import { AuthGuard } from './components/auth/AuthGuard';
 import { QuestBoardPage } from './pages/QuestBoardPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { BadgeCollectionPage } from './pages/BadgeCollectionPage';
+import { CommandCenterPage } from './pages/CommandCenterPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -35,6 +36,7 @@ function App() {
           <Route path="/quests" element={<QuestBoardPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/badges" element={<BadgeCollectionPage />} />
+          <Route path="/command-center" element={<CommandCenterPage />} />
           <Route path="/" element={<Navigate to="/quests" replace />} />
           <Route path="*" element={<Navigate to="/quests" replace />} />
         </Route>

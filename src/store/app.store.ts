@@ -35,6 +35,7 @@ export interface AppState {
   currentMember: Member | null;
   selectedRole: Role | null;
   isScrumMaster: boolean;
+  managedDeveloperIds: string[];
   quests: CategorizedQuests | null;
   leaderboard: LeaderboardEntry[];
   previousLeaderboard: LeaderboardEntry[];
@@ -81,6 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentMember: null,
   selectedRole: null,
   isScrumMaster: false,
+  managedDeveloperIds: [],
   quests: null,
   leaderboard: [],
   previousLeaderboard: [],
@@ -101,8 +103,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const member = await getCurrentMember(openId);
 
     // Check if this user is a scrum master by fetching all members and checking
-    // if any OTHER member's scrum_master_id matches this user's memberId or openId
+    // if any OTHER member's scrum_master_id matches this user's memberId or openId.
+    // Also collect the IDs of developers managed by this user.
     let isScrumMaster = false;
+    const managedDeveloperIds: string[] = [];
     try {
       const allMembers = await listRecords(TABLE_IDS.members);
       for (const rec of allMembers) {
@@ -111,27 +115,31 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (rec.record_id === member.memberId) continue;
 
         const rawSmField = rec.fields.scrum_master_id;
+        let isManaged = false;
         const smIdText = extractTextValue(rawSmField);
         if (smIdText && (smIdText === member.memberId || smIdText === member.openId)) {
-          isScrumMaster = true;
+          isManaged = true;
         }
-        if (Array.isArray(rawSmField)) {
+        if (!isManaged && Array.isArray(rawSmField)) {
           for (const item of rawSmField) {
             if (typeof item === 'object' && item !== null) {
               const linkedId = (item as Record<string, unknown>).record_id ?? (item as Record<string, unknown>).id ?? '';
               if (linkedId === member.memberId) {
-                isScrumMaster = true;
+                isManaged = true;
               }
             }
             if (typeof item === 'string' && (item === member.memberId || item === member.openId)) {
-              isScrumMaster = true;
+              isManaged = true;
             }
           }
         }
-        if (typeof rawSmField === 'string' && (rawSmField === member.memberId || rawSmField === member.openId)) {
-          isScrumMaster = true;
+        if (!isManaged && typeof rawSmField === 'string' && (rawSmField === member.memberId || rawSmField === member.openId)) {
+          isManaged = true;
         }
-        if (isScrumMaster) break;
+        if (isManaged) {
+          isScrumMaster = true;
+          managedDeveloperIds.push(rec.record_id);
+        }
       }
     } catch {
       isScrumMaster = false;
@@ -143,7 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       storedRole && member.roles.includes(storedRole) ? storedRole : null;
     const selectedRole = validStoredRole ?? member.primaryRole;
 
-    set({ currentMember: member, selectedRole, isScrumMaster });
+    set({ currentMember: member, selectedRole, isScrumMaster, managedDeveloperIds });
     sessionStorage.setItem(ROLE_STORAGE_KEY, selectedRole);
 
     // Trigger initial data fetches in parallel
@@ -170,12 +178,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchQuests: async () => {
-    const { currentMember, selectedRole } = get();
+    const { currentMember, selectedRole, managedDeveloperIds } = get();
     if (!currentMember || !selectedRole) return;
 
     set({ questsLoading: true });
     try {
-      const quests = await getQuestsForRole(selectedRole, currentMember.memberId);
+      const quests = await getQuestsForRole(selectedRole, currentMember.memberId, managedDeveloperIds);
 
       // Fetch user's completions to track which quests are already done
       const completionsFilter: LarkFilter = {

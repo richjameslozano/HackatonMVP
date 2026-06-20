@@ -121,11 +121,11 @@ export async function exchangeCodeForToken(code: string): Promise<UserTokenRespo
 }
 
 /**
- * Reads the stored session from sessionStorage.
+ * Reads the stored session from localStorage.
  * Returns null if no session exists or if the session has expired.
  */
 export function getStoredSession(): StoredSession | null {
-  const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
   if (!raw) {
     return null;
   }
@@ -140,6 +140,7 @@ export function getStoredSession(): StoredSession | null {
 
     // Check expiration
     if (session.expiresAt <= Date.now()) {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
       return null;
     }
 
@@ -150,17 +151,18 @@ export function getStoredSession(): StoredSession | null {
 }
 
 /**
- * Persists the user session to sessionStorage.
+ * Persists the user session to localStorage so it survives page refreshes
+ * and tab switches.
  */
 export function storeSession(session: StoredSession): void {
-  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
 /**
- * Removes the stored session from sessionStorage.
+ * Removes the stored session from localStorage.
  */
 export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  localStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 /**

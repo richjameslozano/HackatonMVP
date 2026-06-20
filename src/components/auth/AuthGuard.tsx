@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 
 /**
  * AuthGuard wraps protected routes.
  * - On mount, calls restoreSession() if not already authenticated
- * - Redirects to /login if unauthenticated and not loading
+ * - Shows loading until restore attempt completes
+ * - Redirects to /login if unauthenticated after restore
  * - Redirects to /onboarding if isOnboarding is true
  * - Renders <Outlet /> when authenticated
  */
@@ -15,17 +16,19 @@ export function AuthGuard() {
   const isOnboarding = useAuthStore((s) => s.isOnboarding);
   const restoreSession = useAuthStore((s) => s.restoreSession);
 
-  const hasAttemptedRestore = useRef(false);
+  const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated && !isLoading && !isOnboarding && !hasAttemptedRestore.current) {
-      hasAttemptedRestore.current = true;
-      void restoreSession();
+    if (!isAuthenticated && !hasAttemptedRestore) {
+      restoreSession().finally(() => {
+        setHasAttemptedRestore(true);
+      });
     }
-  }, [isAuthenticated, isLoading, isOnboarding, restoreSession]);
+  }, [isAuthenticated, hasAttemptedRestore, restoreSession]);
 
   // Show loading spinner while session is being restored
-  if (isLoading) {
+  // Block rendering until the first restore attempt has completed
+  if (isLoading || (!isAuthenticated && !hasAttemptedRestore)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-100">
         <div className="text-center">
@@ -44,7 +47,7 @@ export function AuthGuard() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (after restore was attempted)
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
