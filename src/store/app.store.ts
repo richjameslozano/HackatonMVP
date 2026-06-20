@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   Member,
+  Quest,
   Role,
   CategorizedQuests,
   LeaderboardEntry,
@@ -9,10 +10,10 @@ import type {
   LarkFilter,
 } from '../types';
 import { getCurrentMember, getScrumMasterForDeveloper } from '../services/member.service';
-import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest } from '../services/quest.service';
+import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest, editPendingTask, withdrawPendingTask, resubmitTask } from '../services/quest.service';
 import { evaluateBadgeUnlocks, getBadgeCollection } from '../services/badge.service';
 import { getLeaderboard, type TimePeriod } from '../services/leaderboard.service';
-import { notifyTaskProposal, notifyApproval, notifyRejection } from '../services/notification.service';
+import { notifyTaskProposal, notifyApproval, notifyRejection, notifyTaskEdit, notifyTaskWithdrawal } from '../services/notification.service';
 import { listRecords, extractTextValue } from '../services/lark-api.service';
 import { TABLE_IDS } from '../services/config';
 
@@ -63,6 +64,9 @@ export interface AppState {
   proposeTask: (title: string, description: string) => Promise<void>;
   approveTask: (questId: string) => Promise<void>;
   rejectTask: (questId: string, reason: string) => Promise<void>;
+  editPendingTask: (questId: string, title: string, description: string) => Promise<void>;
+  withdrawTask: (questId: string) => Promise<void>;
+  resubmitTask: (originalQuestId: string, title: string, description: string) => Promise<void>;
   fetchLeaderboard: () => Promise<void>;
   fetchBadgeCollection: () => Promise<void>;
   clearNotificationWarning: () => void;
@@ -291,6 +295,90 @@ export const useAppStore = create<AppState>((set, get) => ({
       } catch {
         set({ notificationWarning: 'Failed to send rejection notification to developer' });
       }
+    }
+
+    // Refresh quests
+    void get().fetchQuests();
+  },
+
+  editPendingTask: async (questId: string, title: string, description: string) => {
+    const { currentMember } = get();
+    if (!currentMember) return;
+
+    let quest;
+    try {
+      quest = await editPendingTask(questId, title, description, currentMember.memberId);
+    } catch (err) {
+      console.error('[editPendingTask] Failed:', err);
+      throw err;
+    }
+
+    // Send notification to Scrum Master (non-blocking on failure)
+    try {
+      const scrumMaster = await getScrumMasterForDeveloper(currentMember.memberId);
+      const result = await notifyTaskEdit(quest, currentMember, scrumMaster);
+      if (!result.success && result.warning) {
+        set({ notificationWarning: result.warning });
+      }
+    } catch {
+      set({ notificationWarning: 'Failed to send edit notification to Scrum Master' });
+    }
+
+    // Refresh quests
+    void get().fetchQuests();
+  },
+
+  withdrawTask: async (questId: string) => {
+    const { currentMember, quests } = get();
+    if (!currentMember) return;
+
+    // Grab the quest title from current state before withdrawal
+    const pendingQuest = quests?.pending?.find((q) => q.questId === questId);
+
+    try {
+      await withdrawPendingTask(questId, currentMember.memberId);
+    } catch (err) {
+      console.error('[withdrawTask] Failed:', err);
+      throw err;
+    }
+
+    // Send notification to Scrum Master (non-blocking on failure)
+    try {
+      const scrumMaster = await getScrumMasterForDeveloper(currentMember.memberId);
+      await notifyTaskWithdrawal(
+        (pendingQuest ?? { title: `Task ${questId}` }) as Quest,
+        currentMember,
+        scrumMaster
+      );
+    } catch {
+      set({ notificationWarning: 'Failed to send withdrawal notification to Scrum Master' });
+    }
+
+    // Refresh quests
+    void get().fetchQuests();
+  },
+
+  resubmitTask: async (originalQuestId: string, title: string, description: string) => {
+    const { currentMember } = get();
+    if (!currentMember) return;
+
+    let quest;
+    try {
+      quest = await resubmitTask(originalQuestId, title, description, currentMember.memberId);
+    } catch (err) {
+      console.error('[resubmitTask] Failed:', err);
+      throw err;
+    }
+
+    // Send notification to Scrum Master (non-blocking on failure)
+    try {
+      const scrumMaster = await getScrumMasterForDeveloper(currentMember.memberId);
+      const result = await notifyTaskProposal(quest, currentMember, scrumMaster);
+      if (!result.success && result.warning) {
+        set({ notificationWarning: result.warning });
+      }
+    } catch {
+      set({ notificationWarning: 'Failed to send resubmission notification to Scrum Master' });
     }
 
     // Refresh quests

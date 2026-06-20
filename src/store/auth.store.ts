@@ -7,7 +7,6 @@ import {
   storeSession,
   clearSession,
   getRedirectUri,
-  type StoredSession,
 } from '../services/oauth.service';
 import { getCredentials } from '../services/credential-store';
 import { resolveIdentity, createMemberRecord } from '../services/identity.service';

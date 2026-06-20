@@ -40,3 +40,19 @@ export function canModifyPendingTask(quest: Quest): boolean {
 export function shouldShowRoleSwitcher(member: Member): boolean {
   return member.roles.length > 1;
 }
+
+/**
+ * Returns true if the viewer is the proposer of the quest AND the quest is pending.
+ * This allows editing/withdrawing pending proposals.
+ */
+export function canEditPendingTask(quest: Quest, viewerId: string): boolean {
+  return quest.status === 'pending' && quest.proposerId === viewerId;
+}
+
+/**
+ * Returns true if the viewer is the proposer AND the quest is rejected (not withdrawn).
+ * This allows resubmitting rejected proposals.
+ */
+export function canResubmitTask(quest: Quest, viewerId: string): boolean {
+  return quest.status === 'rejected' && quest.proposerId === viewerId && !quest.withdrawn;
+}
