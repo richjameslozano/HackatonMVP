@@ -204,25 +204,46 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   completeQuest: async (questId: string) => {
-    const { currentMember, selectedRole } = get();
+    const { currentMember, selectedRole, completedQuestIds } = get();
     if (!currentMember || !selectedRole) return;
 
+    // ─── Optimistic Update ──────────────────────────────────────────────
+    // Immediately mark as completed so the UI responds instantly.
+    const previousCompletedIds = new Set(completedQuestIds);
+    const optimisticIds = new Set(completedQuestIds);
+    optimisticIds.add(questId);
+    set({ completedQuestIds: optimisticIds });
+
+    // Show success feedback immediately (badges will be updated async)
+    set({
+      completionFeedback: {
+        success: true,
+        unlockedBadges: [],
+      },
+    });
+
+    // ─── Background API call + badge evaluation ─────────────────────────
     try {
       await completeQuest(questId, currentMember.memberId);
     } catch (err) {
-      console.error('[completeQuest] Failed:', err);
+      // ─── Rollback on failure ────────────────────────────────────────────
+      console.error('[completeQuest] Failed, rolling back:', err);
+      set({
+        completedQuestIds: previousCompletedIds,
+        completionFeedback: null,
+      });
       throw err;
     }
 
-    // Mark as completed locally
-    const updatedIds = new Set(get().completedQuestIds);
-    updatedIds.add(questId);
-    set({ completedQuestIds: updatedIds });
+    // Evaluate badge unlocks and refresh data in parallel (non-blocking)
+    const [unlockedBadges] = await Promise.all([
+      evaluateBadgeUnlocks(currentMember.memberId, selectedRole),
+      get().fetchQuests(),
+      get().fetchLeaderboard(),
+      get().fetchBadgeCollection(),
+    ]);
 
-    // Evaluate badge unlocks
-    const unlockedBadges = await evaluateBadgeUnlocks(currentMember.memberId, selectedRole);
-
-    // Set completion feedback for UI animation
+    // Update feedback with actual badge info
     set({
       completionFeedback: {
         success: true,
@@ -230,12 +251,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
       newBadgeUnlocked: unlockedBadges.length > 0,
     });
-
-    // Refresh quests and leaderboard in parallel
-    const state = get();
-    void state.fetchQuests();
-    void state.fetchLeaderboard();
-    void state.fetchBadgeCollection();
   },
 
   proposeTask: async (title: string, description: string) => {
