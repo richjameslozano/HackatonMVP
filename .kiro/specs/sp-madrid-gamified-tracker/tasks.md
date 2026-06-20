@@ -310,3 +310,87 @@ This plan implements a frontend-only React SPA that gamifies onboarding and dail
   ]
 }
 ```
+
+
+## Additional Tasks (Post-MVP Enhancements)
+
+- [ ] 16. Implement RBAC (Role-Based Access Control)
+  - [ ] 16.1 Enforce route-level access control based on member roles
+    - Restrict Scrum Master actions (approve/reject) to users with scrum_master role
+    - Prevent developers from accessing admin-level operations
+    - Show/hide UI elements based on role permissions
+    - Redirect unauthorized users to appropriate pages
+  - [ ] 16.2 Add role guards to service layer
+    - Validate role permissions before write operations (approve, reject, propose)
+    - Return clear error messages for unauthorized actions
+    - Prevent privilege escalation via direct API manipulation
+
+- [ ] 17. Implement Account Handling (Login/Session)
+  - [ ] 17.1 Create login/member selection page
+    - Fetch all members from Lark Base Members table
+    - Display member list with name and role(s)
+    - Allow user to select their identity
+    - Store selected member in sessionStorage
+    - Redirect to quest board after selection
+  - [ ] 17.2 Add logout functionality
+    - Clear sessionStorage on logout
+    - Redirect to login/selection page
+    - Add logout button to navigation bar
+  - [ ] 17.3 Add session persistence and validation
+    - On app load, check sessionStorage for existing session
+    - Validate stored member still exists in Lark Base
+    - Auto-redirect to login if session is invalid or expired
+
+- [x] 18. Leaderboard Updates and Enhancements
+  - [x] 18.1 Add real-time leaderboard refresh
+    - Auto-refresh leaderboard after quest completion events
+    - Show rank change indicators (up/down arrows)
+    - Add "last updated" timestamp display
+  - [x] 18.2 Add leaderboard filtering and sorting options
+    - Filter by time period (weekly, monthly, all-time)
+    - Show badge breakdown per member on hover/click
+    - Highlight rank changes since last visit
+
+- [x] 19. UI Enhancements
+  - [x] 19.1 Improve overall visual design and theming
+    - Apply SP Madrid branding (colors, fonts, logo)
+    - Add animations and transitions between pages
+    - Improve mobile responsiveness
+    - Add dark/light mode toggle
+  - [x] 19.2 Enhance quest card interactions
+    - Add progress indicators per category
+    - Show streak counters for daily quests
+    - Add confetti/celebration animation on badge unlock
+  - [x] 19.3 Investigate Google Stitch integration via MCP
+    - Research Google Stitch design system components
+    - Evaluate MCP server availability for design tokens
+    - Apply consistent design system if available
+
+- [ ] 20. Error Handling and Audit Logs
+  - [ ] 20.1 Implement error tracking and display
+    - Add global error boundary component
+    - Display user-friendly error messages with retry options
+    - Log errors to console with structured format
+  - [ ] 20.2 Implement audit log table in Lark Base
+    - Create Audit_Logs table (timestamp, user_id, action, details, status)
+    - Log all write operations (quest completion, task proposal, approve, reject)
+    - Log authentication events (login, logout)
+    - Log errors and failures with context
+  - [ ] 20.3 Add audit log viewer (optional admin feature)
+    - Display recent audit entries in a table
+    - Filter by user, action type, or date range
+    - Export audit data for reporting
+
+- [ ] 21. Developer Task Proposal Flow Enhancements
+  - [ ] 21.1 Add task editing for pending proposals
+    - Allow proposer to edit title/description while task is pending
+    - Show edit history in task details
+    - Notify Scrum Master of edits
+  - [ ] 21.2 Add task deletion for pending proposals
+    - Allow proposer to withdraw/delete pending tasks
+    - Remove from pending list and notify Scrum Master
+    - Log deletion in audit trail
+  - [ ] 21.3 Add task resubmission after rejection
+    - Allow developer to revise and resubmit rejected tasks
+    - Show previous rejection reason for reference
+    - Create new quest record with link to original
