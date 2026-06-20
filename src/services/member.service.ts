@@ -7,7 +7,7 @@ import { TABLE_IDS } from './config';
 /**
  * Maps a raw Lark record to a Member domain object.
  */
-function mapRecordToMember(record: LarkRecord): Member {
+export function mapRecordToMember(record: LarkRecord): Member {
   const fields = record.fields;
   return {
     memberId: record.record_id,

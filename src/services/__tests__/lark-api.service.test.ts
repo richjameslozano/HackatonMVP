@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { listRecords, getRecord, createRecord, updateRecord, _resetTokenCache } from '../lark-api.service';
+import { listRecords, getRecord, createRecord, updateRecord } from '../lark-api.service';
+import { resetTokenCache } from '../auth.service';
 
 // ─── Mock fetch globally ────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function mockErrorResponse(status: number, statusText: string) {
 describe('lark-api.service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        _resetTokenCache();
+        resetTokenCache();
     });
 
     afterEach(() => {

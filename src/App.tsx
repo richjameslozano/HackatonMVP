@@ -1,41 +1,43 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/app.store';
-import { LoadingIndicator } from './components/shared/LoadingIndicator';
+import { useAuthStore } from './store/auth.store';
 import { AppShell } from './components/layout/AppShell';
+import { AuthGuard } from './components/auth/AuthGuard';
 import { QuestBoardPage } from './pages/QuestBoardPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { BadgeCollectionPage } from './pages/BadgeCollectionPage';
+import { LoginPage } from './pages/LoginPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { OnboardingPage } from './pages/OnboardingPage';
 
 function App() {
-  const currentMember = useAppStore((s) => s.currentMember);
+  const authMember = useAuthStore((s) => s.currentMember);
   const initializeApp = useAppStore((s) => s.initializeApp);
 
+  // When the auth store resolves a member, initialize the app store with their openId
   useEffect(() => {
-    void initializeApp('ou_diana101');
-  }, [initializeApp]);
-
-  if (!currentMember) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-100">
-        <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-madrid-700 mb-4">
-            <span className="text-lg font-bold text-white">SP</span>
-          </div>
-          <LoadingIndicator size="lg" message="Loading SP Madrid Tracker..." />
-        </div>
-      </div>
-    );
-  }
+    if (authMember?.openId) {
+      void initializeApp(authMember.openId);
+    }
+  }, [authMember, initializeApp]);
 
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/quests" element={<QuestBoardPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/badges" element={<BadgeCollectionPage />} />
-        <Route path="/" element={<Navigate to="/quests" replace />} />
-        <Route path="*" element={<Navigate to="/quests" replace />} />
+      {/* Public routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+
+      {/* Protected routes wrapped with AuthGuard */}
+      <Route element={<AuthGuard />}>
+        <Route element={<AppShell />}>
+          <Route path="/quests" element={<QuestBoardPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/badges" element={<BadgeCollectionPage />} />
+          <Route path="/" element={<Navigate to="/quests" replace />} />
+          <Route path="*" element={<Navigate to="/quests" replace />} />
+        </Route>
       </Route>
     </Routes>
   );
