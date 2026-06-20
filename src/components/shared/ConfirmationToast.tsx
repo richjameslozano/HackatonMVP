@@ -14,23 +14,22 @@ export function ConfirmationToast({ message, type, onDismiss }: ConfirmationToas
   useEffect(() => {
     const timer = setTimeout(() => {
       setVisible(false);
-      setTimeout(onDismiss, 300); // wait for fade-out animation
+      setTimeout(onDismiss, 300);
     }, AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
   const typeStyles =
     type === 'success'
-      ? 'border-green-200 bg-green-50 text-green-800'
-      : 'border-yellow-200 bg-yellow-50 text-yellow-800';
+      ? 'border-madrid-200 bg-madrid-50 text-madrid-800'
+      : 'border-amber-200 bg-amber-50 text-amber-800';
 
-  const iconColor = type === 'success' ? 'text-green-500' : 'text-yellow-500';
+  const iconColor = type === 'success' ? 'text-madrid-500' : 'text-amber-500';
 
   return (
     <div
-      className={`fixed right-4 top-4 z-50 flex max-w-sm items-center gap-3 rounded-md border px-4 py-3 shadow-lg transition-all duration-300 ${typeStyles} ${
-        visible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
-      }`}
+      className={`fixed right-4 top-4 z-50 flex max-w-sm items-center gap-3 rounded-xl border px-4 py-3 shadow-elevated transition-all duration-300 ${typeStyles} ${visible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
+        }`}
       role="status"
       aria-live="polite"
     >
@@ -58,7 +57,7 @@ export function ConfirmationToast({ message, type, onDismiss }: ConfirmationToas
           setVisible(false);
           setTimeout(onDismiss, 300);
         }}
-        className="ml-auto shrink-0 rounded p-1 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-current"
+        className="ml-auto shrink-0 rounded-md p-1 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-current"
         aria-label="Dismiss"
       >
         <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
