@@ -1,5 +1,6 @@
 import type { LarkFilter, LarkRecord, LarkSort } from '../types';
-import { LARK_CONFIG, RETRY_CONFIG } from './config';
+import { LARK_CONFIG } from './config';
+import { getTenantToken, withRetry, createTimeoutSignal } from './auth.service';
 
 // ─── Lark Field Value Extraction ────────────────────────────────────────────
 
@@ -32,125 +33,6 @@ export function extractNumberValue(value: unknown): number {
   return 0;
 }
 
-// ─── Token Cache ────────────────────────────────────────────────────────────
-
-interface TokenCache {
-    token: string;
-    expiresAt: number; // Unix ms
-}
-
-let tokenCache: TokenCache | null = null;
-
-/**
- * Resets the internal token cache. Exposed for testing purposes only.
- */
-export function _resetTokenCache(): void {
-    tokenCache = null;
-}
-
-// ─── Internal Helpers ───────────────────────────────────────────────────────
-
-const REQUEST_TIMEOUT_MS = RETRY_CONFIG.timeoutMs;
-
-/**
- * Creates an AbortController that auto-aborts after the configured timeout.
- * Uses setTimeout so it works with fake timers in tests.
- */
-function createTimeoutSignal(): { signal: AbortSignal; cleanup: () => void } {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    return {
-        signal: controller.signal,
-        cleanup: () => clearTimeout(timer),
-    };
-}
-
-async function fetchTenantToken(): Promise<string> {
-    const now = Date.now();
-
-    if (tokenCache && tokenCache.expiresAt > now) {
-        return tokenCache.token;
-    }
-
-    const { signal, cleanup } = createTimeoutSignal();
-
-    try {
-        const response = await fetch(
-            `${LARK_CONFIG.baseUrl}/auth/v3/tenant_access_token/internal`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    app_id: LARK_CONFIG.appId,
-                    app_secret: LARK_CONFIG.appSecret,
-                }),
-                signal,
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Token fetch failed: ${response.status}`);
-        }
-
-        const data = (await response.json()) as {
-            code: number;
-            msg: string;
-            tenant_access_token: string;
-            expire: number;
-        };
-
-        if (data.code !== 0) {
-            throw new Error(`Token fetch error: ${data.msg} (code ${data.code})`);
-        }
-
-        tokenCache = {
-            token: data.tenant_access_token,
-            expiresAt: now + (data.expire - 60) * 1000,
-        };
-
-        return data.tenant_access_token;
-    } finally {
-        cleanup();
-    }
-}
-
-// ─── Retry Logic ────────────────────────────────────────────────────────────
-
-/**
- * Executes a function with up to 3 retries.
- * On each retry, the token cache is reset so a fresh token is obtained.
- * AbortError from timeout is translated to a readable timeout message.
- * Non-retryable errors (token issues, record not found) are thrown immediately.
- */
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
-        try {
-            return await fn();
-        } catch (error) {
-            if (error instanceof DOMException && error.name === 'AbortError') {
-                lastError = new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
-            } else {
-                lastError = error;
-            }
-
-            // Non-retryable errors: token issues and business logic errors
-            const errorMsg = lastError instanceof Error ? lastError.message : '';
-            if (errorMsg.startsWith('Token fetch') || errorMsg.includes('record not found')) {
-                throw lastError;
-            }
-
-            if (attempt < RETRY_CONFIG.maxAttempts) {
-                // Reset token cache so next attempt fetches a fresh token
-                tokenCache = null;
-            }
-        }
-    }
-
-    throw lastError;
-}
-
 // ─── URL Construction ───────────────────────────────────────────────────────
 
 function getBaseTableUrl(tableId: string): string {
@@ -169,7 +51,7 @@ export async function listRecords(
     sort?: LarkSort[]
 ): Promise<LarkRecord[]> {
     return withRetry(async () => {
-        const token = await fetchTenantToken();
+        const token = await getTenantToken();
         const url = `${getBaseTableUrl(tableId)}/search`;
 
         const body: Record<string, unknown> = {};
@@ -221,7 +103,7 @@ export async function getRecord(
     recordId: string
 ): Promise<LarkRecord> {
     return withRetry(async () => {
-        const token = await fetchTenantToken();
+        const token = await getTenantToken();
         const url = `${getBaseTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
@@ -268,7 +150,7 @@ export async function createRecord(
     fields: Record<string, unknown>
 ): Promise<LarkRecord> {
     return withRetry(async () => {
-        const token = await fetchTenantToken();
+        const token = await getTenantToken();
         const url = getBaseTableUrl(tableId);
 
         const { signal, cleanup } = createTimeoutSignal();
@@ -318,7 +200,7 @@ export async function updateRecord(
     fields: Record<string, unknown>
 ): Promise<LarkRecord> {
     return withRetry(async () => {
-        const token = await fetchTenantToken();
+        const token = await getTenantToken();
         const url = `${getBaseTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
