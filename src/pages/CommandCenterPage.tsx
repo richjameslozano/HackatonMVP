@@ -43,7 +43,8 @@ export function CommandCenterPage() {
     const [detailModalOpen, setDetailModalOpen] = useState(false);
 
     const loadData = useCallback(async () => {
-        if (!currentMember || !isScrumMaster) {
+        if (!currentMember) return; // still waiting for member to load
+        if (!isScrumMaster) {
             setLoading(false);
             return;
         }
