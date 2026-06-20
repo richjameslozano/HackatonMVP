@@ -8,21 +8,16 @@ export function ProgressBar({ earned, total }: ProgressBarProps) {
 
   return (
     <div className="w-full" role="progressbar" aria-valuenow={earned} aria-valuemin={0} aria-valuemax={total} aria-label={`${earned} of ${total} badges earned`}>
-      <div className="flex items-center justify-between text-sm text-gray-700">
-        <span className="font-medium">Badges Earned</span>
-        <span className="font-medium">{earned} / {total}</span>
+      <div className="flex items-center justify-between text-xs text-surface-500 mb-1.5">
+        <span className="font-medium uppercase tracking-wide">Next Badge Progress</span>
+        <span className="font-semibold text-surface-700">{earned} / {total} tasks</span>
       </div>
-      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-100">
         <div
-          className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+          className="h-full rounded-full bg-madrid-500 transition-all duration-500"
           style={{ width: `${percentage}%` }}
         />
       </div>
-      {total > 0 && earned === 0 && (
-        <p className="mt-2 text-xs text-gray-500">
-          Complete quests to start earning badges. You can do it!
-        </p>
-      )}
     </div>
   );
 }
