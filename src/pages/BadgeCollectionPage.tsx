@@ -1,13 +1,15 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/app.store';
 import { BadgeGrid, ProgressBar } from '../components/badge';
-import { LoadingIndicator } from '../components/shared';
+import { LoadingIndicator, ConfettiAnimation } from '../components/shared';
 
 export function BadgeCollectionPage() {
   const selectedRole = useAppStore((s) => s.selectedRole);
   const badgeCollection = useAppStore((s) => s.badgeCollection);
   const badgesLoading = useAppStore((s) => s.badgesLoading);
   const fetchBadgeCollection = useAppStore((s) => s.fetchBadgeCollection);
+  const newBadgeUnlocked = useAppStore((s) => s.newBadgeUnlocked);
+  const clearNewBadgeUnlocked = useAppStore((s) => s.clearNewBadgeUnlocked);
 
   useEffect(() => {
     fetchBadgeCollection();
@@ -21,18 +23,85 @@ export function BadgeCollectionPage() {
     return null;
   }
 
+  const roleLabel = selectedRole === 'agent' ? 'Strategic Agent' : 'Execution Dev';
+  const progressPercent = badgeCollection.totalCount > 0
+    ? Math.round((badgeCollection.earnedCount / badgeCollection.totalCount) * 100)
+    : 0;
+
   return (
-    <div className="space-y-6 p-4">
-      <h2 className="text-xl font-semibold text-gray-800">Badge Collection</h2>
+    <div className="space-y-6">
+      {/* Confetti on badge unlock */}
+      <ConfettiAnimation
+        visible={newBadgeUnlocked}
+        onComplete={clearNewBadgeUnlocked}
+      />
 
-      <ProgressBar earned={badgeCollection.earnedCount} total={badgeCollection.totalCount} />
+      {/* Header with progress ring */}
+      <div className="card">
+        <div className="flex flex-col items-center gap-6 sm:flex-row">
+          {/* Progress circle */}
+          <div className="relative flex h-24 w-24 items-center justify-center flex-shrink-0">
+            <svg className="h-24 w-24 -rotate-90" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" fill="none" strokeWidth="8" className="stroke-surface-100" />
+              <circle
+                cx="48" cy="48" r="40" fill="none" strokeWidth="8"
+                className="stroke-madrid-500 transition-all duration-700"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 40}`}
+                strokeDashoffset={`${2 * Math.PI * 40 * (1 - progressPercent / 100)}`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-surface-900">{progressPercent}%</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Global</span>
+            </div>
+          </div>
 
-      {badgeCollection.earnedCount === 0 && (
-        <p className="text-sm text-indigo-600 font-medium">
-          Start completing quests to earn your first badge!
-        </p>
-      )}
+          {/* Info */}
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-xl font-bold text-surface-900">Badge Collection</h1>
+            {badgeCollection.earnedCount === 0 ? (
+              <p className="mt-1 text-sm text-surface-500">
+                Start completing quests to earn your first badge!
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-surface-500">
+                You're making great progress. Keep completing quests to unlock more badges.
+              </p>
+            )}
+            <div className="mt-3">
+              <ProgressBar earned={badgeCollection.earnedCount} total={badgeCollection.totalCount} />
+            </div>
+          </div>
 
+          {/* Badge count summary */}
+          <div className="flex gap-3 flex-shrink-0">
+            <div className="flex flex-col items-center rounded-lg border border-surface-200 px-4 py-2">
+              <span className="text-lg font-bold text-madrid-600">{badgeCollection.earnedCount}</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Earned</span>
+            </div>
+            <div className="flex flex-col items-center rounded-lg border border-surface-200 px-4 py-2">
+              <span className="text-lg font-bold text-surface-600">{badgeCollection.totalCount}</span>
+              <span className="text-[10px] uppercase tracking-wide text-surface-500">Total</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Badge path title */}
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-surface-900">
+          <svg className="h-5 w-5 text-madrid-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.746 3.746 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          </svg>
+          {roleLabel} Path
+        </h2>
+        <span className="badge-pill bg-madrid-100 text-madrid-700">
+          {badgeCollection.totalCount} Badges
+        </span>
+      </div>
+
+      {/* Badge grid */}
       <BadgeGrid badges={badgeCollection.badges} />
     </div>
   );
