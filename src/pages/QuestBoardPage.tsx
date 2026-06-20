@@ -25,6 +25,7 @@ export function QuestBoardPage() {
   const clearNotificationWarning = useAppStore((s) => s.clearNotificationWarning);
   const newBadgeUnlocked = useAppStore((s) => s.newBadgeUnlocked);
   const clearNewBadgeUnlocked = useAppStore((s) => s.clearNewBadgeUnlocked);
+  const isScrumMaster = useAppStore((s) => s.isScrumMaster);
 
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -113,16 +114,18 @@ export function QuestBoardPage() {
         />
       )}
 
-      {/* Page header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
-          MADRID_HQ // QUEST_BOARD
-        </p>
-        <h1 className="mt-1 text-2xl font-bold text-surface-900">{roleLabel} Quest Board</h1>
-        <p className="mt-1 text-sm text-surface-500">
-          Complete quests to earn badges and climb the leaderboard.
-        </p>
-      </div>
+      {/* Page header - Agent view only */}
+      {selectedRole === 'agent' && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
+            MADRID_HQ // QUEST_BOARD
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-surface-900">Agent Quest Board</h1>
+          <p className="mt-1 text-sm text-surface-500">
+            Complete quests to earn badges and climb the leaderboard.
+          </p>
+        </div>
+      )}
 
       {/* Agent View */}
       {selectedRole === 'agent' && (
@@ -193,71 +196,86 @@ export function QuestBoardPage() {
 
       {/* Developer View */}
       {selectedRole === 'developer' && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main content */}
-          <div className="lg:col-span-2 space-y-6">
-            <QuestCategory
-              title="Approved Sprint Tasks"
-              quests={quests?.sprint ?? []}
-              onComplete={handleComplete}
-              completedQuestIds={completedQuestIds}
-              icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              }
-            />
-
-            {(quests?.assigned ?? []).length > 0 && (
-              <QuestCategory
-                title="Assigned to You"
-                quests={quests?.assigned ?? []}
-                onComplete={handleComplete}
-                completedQuestIds={completedQuestIds}
-              />
-            )}
-
-            {(quests?.open ?? []).length > 0 && (
-              <QuestCategory
-                title="Open Tasks (Optional)"
-                quests={quests?.open ?? []}
-                onComplete={handleComplete}
-                completedQuestIds={completedQuestIds}
-                emptyMessage="No open tasks available"
-              />
-            )}
+        <>
+          {/* Developer header with Propose Task button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
+                MADRID_HQ // SPRINT_04
+              </p>
+              <h1 className="mt-1 text-2xl font-bold text-surface-900">Developer Quest Board</h1>
+              <p className="mt-1 text-sm text-surface-500">
+                Overview of active development sprints and community-proposed features.
+              </p>
+            </div>
+            <ProposeTaskForm onSubmit={handlePropose} />
           </div>
 
-          {/* Sidebar - Pending tasks + Proposal */}
-          <div className="space-y-6">
-            <div className="card">
-              <div className="flex items-center gap-2 mb-4">
-                <svg className="h-5 w-5 text-madrid-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="text-base font-semibold text-surface-900">Pending Approval</h3>
-              </div>
-              {(quests?.pending ?? []).length === 0 ? (
-                <p className="py-2 text-sm text-surface-400 italic">Awaiting first vote</p>
-              ) : (
-                <div className="space-y-3">
-                  {(quests?.pending ?? []).map((quest) => (
-                    <PendingTaskCard
-                      key={quest.questId}
-                      quest={quest}
-                      currentMemberId={currentMember?.memberId ?? ''}
-                      isScrumMaster={true}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                    />
-                  ))}
-                </div>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Main content */}
+            <div className="lg:col-span-2 space-y-6">
+              <QuestCategory
+                title="Approved Sprint Tasks"
+                quests={quests?.sprint ?? []}
+                onComplete={handleComplete}
+                completedQuestIds={completedQuestIds}
+                icon={
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+
+              {(quests?.assigned ?? []).length > 0 && (
+                <QuestCategory
+                  title="Assigned to You"
+                  quests={quests?.assigned ?? []}
+                  onComplete={handleComplete}
+                  completedQuestIds={completedQuestIds}
+                />
+              )}
+
+              {(quests?.open ?? []).length > 0 && (
+                <QuestCategory
+                  title="Open Tasks (Optional)"
+                  quests={quests?.open ?? []}
+                  onComplete={handleComplete}
+                  completedQuestIds={completedQuestIds}
+                  emptyMessage="No open tasks available"
+                />
               )}
             </div>
 
-            <ProposeTaskForm onSubmit={handlePropose} />
+            {/* Sidebar - Pending tasks */}
+            <div className="space-y-6">
+              <div className="card">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="h-5 w-5 text-madrid-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-base font-semibold text-surface-900">Pending Approval</h3>
+                </div>
+                {(quests?.pending ?? []).length === 0 ? (
+                  <p className="py-2 text-sm text-surface-400 italic">Awaiting first vote</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(quests?.pending ?? []).map((quest) => (
+                      <PendingTaskCard
+                        key={quest.questId}
+                        quest={quest}
+                        currentMemberId={currentMember?.memberId ?? ''}
+                        isScrumMaster={isScrumMaster}
+                        proposerName={quest.proposerId === currentMember?.memberId ? currentMember?.displayName : undefined}
+                        onApprove={handleApprove}
+                        onReject={handleReject}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
