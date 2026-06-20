@@ -25,12 +25,12 @@ function mapRecordToQuest(record: LarkRecord): Quest {
     questId: record.record_id,
     title: extractTextValue(fields.title),
     description: extractTextValue(fields.description),
-    category: parseCategory(fields.category),
-    targetRole: parseTargetRole(fields.target_role),
-    status: parseStatus(fields.status),
-    assignmentType: parseAssignmentType(fields.assignment_type),
+    category: parseCategory(extractTextValue(fields.category) || fields.category),
+    targetRole: parseTargetRole(extractTextValue(fields.target_role) || fields.target_role),
+    status: parseStatus(extractTextValue(fields.status) || fields.status),
+    assignmentType: parseAssignmentType(extractTextValue(fields.assignment_type) || fields.assignment_type),
     assigneeId: extractTextValue(fields.assignee_id) || null,
-    completionMode: parseCompletionMode(fields.completion_mode),
+    completionMode: parseCompletionMode(extractTextValue(fields.completion_mode) || fields.completion_mode),
     proposerId: extractTextValue(fields.proposer_id) || null,
     createdAt: fields.created_at ? new Date(fields.created_at as string | number) : new Date(),
   };
@@ -81,7 +81,8 @@ function parseStatus(value: unknown): Quest['status'] {
   if (typeof value === 'string' && valid.includes(value.toLowerCase())) {
     return value.toLowerCase() as Quest['status'];
   }
-  return 'active';
+  // Default to 'pending' — safer than 'active' since it won't appear in task lists
+  return 'pending';
 }
 
 /**
