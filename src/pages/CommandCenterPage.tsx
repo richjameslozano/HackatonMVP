@@ -31,6 +31,7 @@ export function CommandCenterPage() {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [stats, setStats] = useState<TeamStats | null>(null);
     const [distribution, setDistribution] = useState<TaskDistribution | null>(null);
     const [overview, setOverview] = useState<TeamOverview | null>(null);
@@ -42,9 +43,13 @@ export function CommandCenterPage() {
     const [detailModalOpen, setDetailModalOpen] = useState(false);
 
     const loadData = useCallback(async () => {
-        if (!currentMember || !isScrumMaster) return;
+        if (!currentMember || !isScrumMaster) {
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
+        setError(null);
         try {
             const [statsData, distData, overviewData, activityData] = await Promise.all([
                 getTeamStats(currentMember.memberId),
@@ -85,6 +90,7 @@ export function CommandCenterPage() {
             setPendingTasks(pendingItems);
         } catch (err) {
             console.error('[CommandCenter] Failed to load data:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load Command Center data');
         } finally {
             setLoading(false);
         }
@@ -124,6 +130,11 @@ export function CommandCenterPage() {
         navigate('/quests');
     }, [navigate]);
 
+    // Wait for current member to be loaded before making access decisions
+    if (!currentMember) {
+        return <LoadingIndicator size="lg" message="Loading Command Center..." />;
+    }
+
     // Access control
     if (!isScrumMaster) {
         return (
@@ -141,6 +152,20 @@ export function CommandCenterPage() {
 
     if (loading) {
         return <LoadingIndicator size="lg" message="Loading Command Center..." />;
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm text-red-600 mb-4">{error}</p>
+                <button
+                    onClick={() => void loadData()}
+                    className="rounded-lg bg-madrid-600 px-4 py-2 text-sm font-medium text-white hover:bg-madrid-700"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
 
     const backlogRemaining = stats ? stats.totalTasks - stats.completedTasks : 0;
