@@ -11,11 +11,11 @@ const sizeClasses: Record<string, string> = {
 
 export function LoadingIndicator({ size = 'md', message }: LoadingIndicatorProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-4" role="status">
+    <div className="flex flex-col items-center justify-center gap-3 py-8" role="status">
       <div
-        className={`${sizeClasses[size]} animate-spin rounded-full border-gray-300 border-t-indigo-600`}
+        className={`${sizeClasses[size]} animate-spin rounded-full border-surface-200 border-t-madrid-600`}
       />
-      {message && <p className="text-sm text-gray-500">{message}</p>}
+      {message && <p className="text-sm text-surface-500">{message}</p>}
       <span className="sr-only">Loading...</span>
     </div>
   );
