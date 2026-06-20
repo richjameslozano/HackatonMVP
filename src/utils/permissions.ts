@@ -10,18 +10,18 @@ export function canCompleteQuest(quest: Quest): boolean {
 
 /**
  * Returns true if the viewer is allowed to approve or reject this quest.
- * Conditions: quest must be pending, viewer must be a Scrum Master,
- * and viewer cannot be the proposer (prevents self-approval).
+ * Conditions: quest must be pending AND viewer must be a Scrum Master.
+ * Note: Self-approval is allowed since the scrum master and developer
+ * may be the same person in small teams.
  */
 export function canApproveReject(
-  viewerId: string,
+  _viewerId: string,
   quest: Quest,
   viewerIsScrumMaster: boolean
 ): boolean {
   return (
     quest.status === 'pending' &&
-    viewerIsScrumMaster &&
-    viewerId !== quest.proposerId
+    viewerIsScrumMaster
   );
 }
 
