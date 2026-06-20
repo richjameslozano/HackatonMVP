@@ -52,9 +52,13 @@ function mapRecordToQuestPartial(record: LarkRecord): Pick<Quest, 'questId' | 's
 }
 
 function parseRole(value: unknown): Role {
-  if (value === 'agent' || value === 'developer') return value;
-  if (typeof value === 'string') {
-    const lower = value.toLowerCase().trim();
+  // Handle Lark's array format
+  const strValue = typeof value === 'string' ? value :
+    (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null && 'text' in value[0])
+      ? (value[0] as { text: string }).text :
+      (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') ? value[0] : '';
+  if (strValue) {
+    const lower = strValue.toLowerCase().trim();
     if (lower === 'agent') return 'agent';
     if (lower === 'developer') return 'developer';
   }
@@ -63,10 +67,14 @@ function parseRole(value: unknown): Role {
 
 function parseStatus(value: unknown): Quest['status'] {
   const valid = ['active', 'pending', 'rejected'];
-  if (typeof value === 'string' && valid.includes(value.toLowerCase())) {
-    return value.toLowerCase() as Quest['status'];
+  // Handle Lark's array format for field values
+  const strValue = typeof value === 'string' ? value :
+    (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && value[0] !== null && 'text' in value[0])
+      ? (value[0] as { text: string }).text : '';
+  if (strValue && valid.includes(strValue.toLowerCase())) {
+    return strValue.toLowerCase() as Quest['status'];
   }
-  return 'active';
+  return 'pending';
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -87,7 +95,7 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
   };
   const completionRecords = await listRecords(TABLE_IDS.questCompletions, completionsFilter);
 
-  // 2. Determine qualifying completion count
+  // 2. Determine qualifying completion count (deduplicated by quest_id)
   let qualifyingCount: number;
 
   if (role === 'developer') {
@@ -108,27 +116,22 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
         })
       );
 
-      // Count completions where the linked quest is active
-      qualifyingCount = completionRecords.filter((cr) => {
-        const questId = extractTextValue(cr.fields.quest_id);
+      // Count unique quests where the linked quest is active
+      qualifyingCount = questIds.filter((questId) => {
         const quest = questMap.get(questId);
         return quest?.status === 'active';
       }).length;
     }
   } else {
-    // For agents: all completions count
-    qualifyingCount = completionRecords.length;
+    // For agents: count unique completed quests
+    const uniqueQuestIds = new Set(completionRecords.map(r => extractTextValue(r.fields.quest_id)));
+    qualifyingCount = uniqueQuestIds.size;
   }
 
-  // 3. Fetch all badges for this role
-  const badgesFilter: LarkFilter = {
-    conjunction: 'and',
-    conditions: [
-      { field_name: 'target_role', operator: 'is', value: [role] },
-    ],
-  };
-  const badgeRecords = await listRecords(TABLE_IDS.badges, badgesFilter);
-  const badges = badgeRecords.map(mapRecordToBadge);
+  // 3. Fetch all badges and filter by role client-side
+  // (Lark filter on single-select fields can be unreliable)
+  const allBadgeRecords = await listRecords(TABLE_IDS.badges);
+  const badges = allBadgeRecords.map(mapRecordToBadge).filter(b => b.targetRole === role);
 
   // 4. Fetch all Badge_Earned records for this member (to prevent duplicates)
   const earnedFilter: LarkFilter = {
@@ -154,7 +157,7 @@ export async function evaluateBadgeUnlocks(memberId: string, role: Role): Promis
         await createRecord(TABLE_IDS.badgeEarned, {
           member_id: memberId,
           badge_id: badge.badgeId,
-          earned_at: new Date().toISOString(),
+          earned_at: Date.now(),
         });
         newlyAwarded.push(badge);
       } catch {
@@ -175,15 +178,9 @@ export async function getBadgeCollection(
   memberId: string,
   role: Role
 ): Promise<BadgeCollectionView> {
-  // 1. Fetch all badges for this role
-  const badgesFilter: LarkFilter = {
-    conjunction: 'and',
-    conditions: [
-      { field_name: 'target_role', operator: 'is', value: [role] },
-    ],
-  };
-  const badgeRecords = await listRecords(TABLE_IDS.badges, badgesFilter);
-  const badges = badgeRecords.map(mapRecordToBadge);
+  // 1. Fetch all badges and filter by role client-side
+  const allBadgeRecords = await listRecords(TABLE_IDS.badges);
+  const badges = allBadgeRecords.map(mapRecordToBadge).filter(b => b.targetRole === role);
 
   // 2. Fetch all Badge_Earned records for this member
   const earnedFilter: LarkFilter = {
@@ -200,7 +197,19 @@ export async function getBadgeCollection(
     })
   );
 
-  // 3. Join badges with earned state
+  // 3. Fetch quest completions for this member to show progress
+  const completionsFilter: LarkFilter = {
+    conjunction: 'and',
+    conditions: [
+      { field_name: 'member_id', operator: 'is', value: [memberId] },
+    ],
+  };
+  const completionRecords = await listRecords(TABLE_IDS.questCompletions, completionsFilter);
+  // Deduplicate by quest_id (only count each quest once)
+  const uniqueQuestIds = new Set(completionRecords.map(r => extractTextValue(r.fields.quest_id)));
+  const qualifyingCompletions = uniqueQuestIds.size;
+
+  // 4. Join badges with earned state
   const badgeItems = badges.map((badge) => {
     const earned = earnedMap.get(badge.badgeId);
     return {
@@ -212,9 +221,22 @@ export async function getBadgeCollection(
 
   const earnedCount = badgeItems.filter((item) => item.earned).length;
 
+  // 5. Determine next badge goal (first unearned badge sorted by requiredCompletions)
+  const unearnedBadges = badges
+    .filter((b) => !earnedMap.has(b.badgeId))
+    .sort((a, b) => a.requiredCompletions - b.requiredCompletions);
+
+  const nextBadge = unearnedBadges.length > 0 ? unearnedBadges[0]! : null;
+  const nextBadgeRequired = nextBadge ? nextBadge.requiredCompletions : qualifyingCompletions;
+  const nextBadgeProgress = Math.min(qualifyingCompletions, nextBadgeRequired);
+
   return {
     badges: badgeItems,
     earnedCount,
     totalCount: badges.length,
+    qualifyingCompletions,
+    nextBadge,
+    nextBadgeProgress,
+    nextBadgeRequired,
   };
 }
