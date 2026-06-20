@@ -11,7 +11,7 @@ import type {
 import { getCurrentMember, getScrumMasterForDeveloper } from '../services/member.service';
 import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest } from '../services/quest.service';
 import { evaluateBadgeUnlocks, getBadgeCollection } from '../services/badge.service';
-import { getLeaderboard } from '../services/leaderboard.service';
+import { getLeaderboard, type TimePeriod } from '../services/leaderboard.service';
 import { notifyTaskProposal, notifyApproval, notifyRejection } from '../services/notification.service';
 import { listRecords, extractTextValue } from '../services/lark-api.service';
 import { TABLE_IDS } from '../services/config';
@@ -35,6 +35,9 @@ export interface AppState {
   selectedRole: Role | null;
   quests: CategorizedQuests | null;
   leaderboard: LeaderboardEntry[];
+  previousLeaderboard: LeaderboardEntry[];
+  leaderboardLastUpdated: Date | null;
+  leaderboardTimePeriod: TimePeriod;
   badgeCollection: BadgeCollectionView | null;
 
   // Loading states (per section)
@@ -48,10 +51,12 @@ export interface AppState {
   // Feedback states
   notificationWarning: string | null;
   completionFeedback: CompletionFeedback | null;
+  newBadgeUnlocked: boolean;
 
   // Actions
   initializeApp: (openId: string) => Promise<void>;
   setRole: (role: Role) => void;
+  setLeaderboardTimePeriod: (period: TimePeriod) => void;
   fetchQuests: () => Promise<void>;
   completeQuest: (questId: string) => Promise<void>;
   proposeTask: (title: string, description: string) => Promise<void>;
@@ -61,6 +66,7 @@ export interface AppState {
   fetchBadgeCollection: () => Promise<void>;
   clearNotificationWarning: () => void;
   clearCompletionFeedback: () => void;
+  clearNewBadgeUnlocked: () => void;
 }
 
 // ─── Store Implementation ───────────────────────────────────────────────────
@@ -71,6 +77,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedRole: null,
   quests: null,
   leaderboard: [],
+  previousLeaderboard: [],
+  leaderboardLastUpdated: null,
+  leaderboardTimePeriod: 'all-time' as TimePeriod,
   badgeCollection: null,
   questsLoading: false,
   leaderboardLoading: false,
@@ -78,6 +87,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   completedQuestIds: new Set<string>(),
   notificationWarning: null,
   completionFeedback: null,
+  newBadgeUnlocked: false,
 
   // ─── Actions ────────────────────────────────────────────────────────────
 
@@ -109,6 +119,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     void state.fetchQuests();
     void state.fetchLeaderboard();
     void state.fetchBadgeCollection();
+  },
+
+  setLeaderboardTimePeriod: (period: TimePeriod) => {
+    set({ leaderboardTimePeriod: period });
+    void get().fetchLeaderboard();
   },
 
   fetchQuests: async () => {
@@ -162,6 +177,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         success: true,
         unlockedBadges,
       },
+      newBadgeUnlocked: unlockedBadges.length > 0,
     });
 
     // Refresh quests and leaderboard in parallel
@@ -247,13 +263,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchLeaderboard: async () => {
-    const { selectedRole } = get();
+    const { selectedRole, leaderboard: currentLeaderboard, leaderboardTimePeriod } = get();
     if (!selectedRole) return;
 
     set({ leaderboardLoading: true });
     try {
-      const leaderboard = await getLeaderboard(selectedRole);
-      set({ leaderboard });
+      const leaderboard = await getLeaderboard(selectedRole, leaderboardTimePeriod);
+      set({
+        previousLeaderboard: currentLeaderboard,
+        leaderboard,
+        leaderboardLastUpdated: new Date(),
+      });
     } finally {
       set({ leaderboardLoading: false });
     }
@@ -278,5 +298,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearCompletionFeedback: () => {
     set({ completionFeedback: null });
+  },
+
+  clearNewBadgeUnlocked: () => {
+    set({ newBadgeUnlocked: false });
   },
 }));
