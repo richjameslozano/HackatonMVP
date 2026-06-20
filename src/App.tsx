@@ -17,8 +17,13 @@ function App() {
 
   if (!currentMember) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <LoadingIndicator size="lg" message="Loading application..." />
+      <div className="flex min-h-screen items-center justify-center bg-surface-100">
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-madrid-700 mb-4">
+            <span className="text-lg font-bold text-white">SP</span>
+          </div>
+          <LoadingIndicator size="lg" message="Loading SP Madrid Tracker..." />
+        </div>
       </div>
     );
   }
