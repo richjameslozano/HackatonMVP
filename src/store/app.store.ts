@@ -33,6 +33,7 @@ export interface AppState {
   // Data
   currentMember: Member | null;
   selectedRole: Role | null;
+  isScrumMaster: boolean;
   quests: CategorizedQuests | null;
   leaderboard: LeaderboardEntry[];
   previousLeaderboard: LeaderboardEntry[];
@@ -75,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
   currentMember: null,
   selectedRole: null,
+  isScrumMaster: false,
   quests: null,
   leaderboard: [],
   previousLeaderboard: [],
@@ -94,13 +96,46 @@ export const useAppStore = create<AppState>((set, get) => ({
   initializeApp: async (openId: string) => {
     const member = await getCurrentMember(openId);
 
+    // Check if this user is a scrum master by fetching all members and checking
+    // if any member's scrum_master_id matches this user's memberId or openId
+    let isScrumMaster = false;
+    try {
+      const allMembers = await listRecords(TABLE_IDS.members);
+      for (const rec of allMembers) {
+        const rawSmField = rec.fields.scrum_master_id;
+        const smIdText = extractTextValue(rawSmField);
+        if (smIdText && (smIdText === member.memberId || smIdText === member.openId)) {
+          isScrumMaster = true;
+        }
+        if (Array.isArray(rawSmField)) {
+          for (const item of rawSmField) {
+            if (typeof item === 'object' && item !== null) {
+              const linkedId = (item as Record<string, unknown>).record_id ?? (item as Record<string, unknown>).id ?? '';
+              if (linkedId === member.memberId) {
+                isScrumMaster = true;
+              }
+            }
+            if (typeof item === 'string' && (item === member.memberId || item === member.openId)) {
+              isScrumMaster = true;
+            }
+          }
+        }
+        if (typeof rawSmField === 'string' && (rawSmField === member.memberId || rawSmField === member.openId)) {
+          isScrumMaster = true;
+        }
+        if (isScrumMaster) break;
+      }
+    } catch {
+      isScrumMaster = false;
+    }
+
     // Restore role from sessionStorage or use primary role
     const storedRole = sessionStorage.getItem(ROLE_STORAGE_KEY) as Role | null;
     const validStoredRole =
       storedRole && member.roles.includes(storedRole) ? storedRole : null;
     const selectedRole = validStoredRole ?? member.primaryRole;
 
-    set({ currentMember: member, selectedRole });
+    set({ currentMember: member, selectedRole, isScrumMaster });
     sessionStorage.setItem(ROLE_STORAGE_KEY, selectedRole);
 
     // Trigger initial data fetches in parallel
