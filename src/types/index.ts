@@ -2,9 +2,15 @@
 
 export type Role = 'agent' | 'developer';
 
+export type TargetRole = Role | 'all';
+
 export type QuestCategory = 'onboarding' | 'daily' | 'milestone' | 'sprint';
 
 export type QuestStatus = 'active' | 'pending' | 'rejected';
+
+export type AssignmentType = 'all' | 'assigned' | 'open';
+
+export type CompletionMode = 'multiple' | 'first-claim';
 
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
@@ -22,8 +28,11 @@ export interface Quest {
   title: string;
   description: string;
   category: QuestCategory;
-  targetRole: Role;
+  targetRole: TargetRole;
   status: QuestStatus;
+  assignmentType: AssignmentType;
+  assigneeId: string | null;
+  completionMode: CompletionMode;
   proposerId: string | null;
   createdAt: Date;
 }
@@ -59,6 +68,8 @@ export interface CategorizedQuests {
   milestones?: Quest[];
   sprint?: Quest[];
   pending?: Quest[];
+  open?: Quest[];
+  assigned?: Quest[];
 }
 
 export interface BadgeCollectionView {
