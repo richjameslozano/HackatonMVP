@@ -80,6 +80,10 @@ export interface BadgeCollectionView {
   }>;
   earnedCount: number;
   totalCount: number;
+  qualifyingCompletions: number;
+  nextBadge: Badge | null;
+  nextBadgeProgress: number; // completions toward next badge threshold
+  nextBadgeRequired: number; // total required for next badge
 }
 
 export interface LeaderboardEntry {
