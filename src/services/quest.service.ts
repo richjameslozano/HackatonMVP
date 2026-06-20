@@ -3,6 +3,9 @@ import type {
   QuestCompletion,
   CategorizedQuests,
   Role,
+  TargetRole,
+  AssignmentType,
+  CompletionMode,
   LarkFilter,
   LarkRecord,
 } from '../types';
@@ -23,8 +26,11 @@ function mapRecordToQuest(record: LarkRecord): Quest {
     title: extractTextValue(fields.title),
     description: extractTextValue(fields.description),
     category: parseCategory(fields.category),
-    targetRole: parseRole(fields.target_role),
+    targetRole: parseTargetRole(fields.target_role),
     status: parseStatus(fields.status),
+    assignmentType: parseAssignmentType(fields.assignment_type),
+    assigneeId: extractTextValue(fields.assignee_id) || null,
+    completionMode: parseCompletionMode(fields.completion_mode),
     proposerId: extractTextValue(fields.proposer_id) || null,
     createdAt: fields.created_at ? new Date(fields.created_at as string | number) : new Date(),
   };
@@ -38,14 +44,36 @@ function parseCategory(value: unknown): Quest['category'] {
   return 'daily';
 }
 
-function parseRole(value: unknown): Role {
-  if (value === 'agent' || value === 'developer') return value;
+function parseTargetRole(value: unknown): TargetRole {
+  if (value === 'agent' || value === 'developer' || value === 'all') return value;
   if (typeof value === 'string') {
     const lower = value.toLowerCase().trim();
     if (lower === 'agent') return 'agent';
     if (lower === 'developer') return 'developer';
+    if (lower === 'all') return 'all';
   }
   return 'agent';
+}
+
+function parseAssignmentType(value: unknown): AssignmentType {
+  if (value === 'all' || value === 'assigned' || value === 'open') return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim();
+    if (lower === 'all') return 'all';
+    if (lower === 'assigned') return 'assigned';
+    if (lower === 'open') return 'open';
+  }
+  return 'all';
+}
+
+function parseCompletionMode(value: unknown): CompletionMode {
+  if (value === 'multiple' || value === 'first-claim') return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim();
+    if (lower === 'multiple') return 'multiple';
+    if (lower === 'first-claim' || lower === 'first_claim') return 'first-claim';
+  }
+  return 'multiple';
 }
 
 function parseStatus(value: unknown): Quest['status'] {
@@ -73,27 +101,43 @@ function mapRecordToCompletion(record: LarkRecord): QuestCompletion {
 
 /**
  * Categorizes a list of quests into the CategorizedQuests structure.
- * For developers, pending quests go into the 'pending' category.
+ * Handles assignment types: 'all' (everyone), 'assigned' (specific person), 'open' (optional/claimable).
+ * Assumes quests are already filtered to be visible to this role.
  */
-function categorizeQuests(quests: Quest[], role: Role): CategorizedQuests {
+function categorizeQuests(quests: Quest[], role: Role, memberId: string): CategorizedQuests {
   const result: CategorizedQuests = {};
 
+  // Separate by assignment type
+  const assignedToMe = quests.filter(
+    (q) => q.assignmentType === 'assigned' && q.assigneeId === memberId
+  );
+  const openQuests = quests.filter((q) => q.assignmentType === 'open');
+  const teamQuests = quests.filter(
+    (q) => q.assignmentType === 'all' || (q.assignmentType === 'assigned' && q.assigneeId === memberId)
+  );
+
   if (role === 'agent') {
-    const onboarding = quests.filter((q) => q.category === 'onboarding');
-    const daily = quests.filter((q) => q.category === 'daily');
-    const milestones = quests.filter((q) => q.category === 'milestone');
+    const onboarding = teamQuests.filter((q) => q.category === 'onboarding');
+    const daily = teamQuests.filter((q) => q.category === 'daily');
+    const milestones = teamQuests.filter((q) => q.category === 'milestone');
 
     if (onboarding.length > 0) result.onboarding = onboarding;
     if (daily.length > 0) result.daily = daily;
     if (milestones.length > 0) result.milestones = milestones;
   } else {
     // Developer: active sprint tasks + pending tasks
-    const sprint = quests.filter((q) => q.category === 'sprint' && q.status === 'active');
+    const sprint = teamQuests.filter((q) => q.category === 'sprint' && q.status === 'active');
     const pending = quests.filter((q) => q.status === 'pending');
 
     if (sprint.length > 0) result.sprint = sprint;
     if (pending.length > 0) result.pending = pending;
   }
+
+  // Add assigned tasks (specific to this user, across all categories)
+  if (assignedToMe.length > 0) result.assigned = assignedToMe;
+
+  // Add open/optional tasks
+  if (openQuests.length > 0) result.open = openQuests;
 
   return result;
 }
@@ -101,10 +145,12 @@ function categorizeQuests(quests: Quest[], role: Role): CategorizedQuests {
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Fetches quests filtered by target_role and categorizes them into CategorizedQuests.
+ * Fetches quests filtered by target_role (role-specific + 'all') and categorizes them.
+ * Fetches all quests and filters client-side to handle 'all' target_role.
  */
-export async function getQuestsForRole(role: Role, _memberId: string): Promise<CategorizedQuests> {
-  const filter: LarkFilter = {
+export async function getQuestsForRole(role: Role, memberId: string): Promise<CategorizedQuests> {
+  // Fetch quests matching this role
+  const roleFilter: LarkFilter = {
     conjunction: 'and',
     conditions: [
       {
@@ -114,11 +160,30 @@ export async function getQuestsForRole(role: Role, _memberId: string): Promise<C
       },
     ],
   };
+  const roleRecords = await listRecords(TABLE_IDS.quests, roleFilter);
 
-  const records = await listRecords(TABLE_IDS.quests, filter);
-  const quests = records.map(mapRecordToQuest);
+  // Also fetch quests targeting 'all' roles
+  const allRoleFilter: LarkFilter = {
+    conjunction: 'and',
+    conditions: [
+      {
+        field_name: 'target_role',
+        operator: 'is',
+        value: ['all'],
+      },
+    ],
+  };
+  const allRoleRecords = await listRecords(TABLE_IDS.quests, allRoleFilter);
 
-  return categorizeQuests(quests, role);
+  // Combine and deduplicate
+  const recordMap = new Map<string, LarkRecord>();
+  for (const r of [...roleRecords, ...allRoleRecords]) {
+    recordMap.set(r.record_id, r);
+  }
+
+  const quests = Array.from(recordMap.values()).map(mapRecordToQuest);
+
+  return categorizeQuests(quests, role, memberId);
 }
 
 /**
@@ -146,6 +211,9 @@ export async function proposeTask(
     category: 'sprint',
     target_role: 'developer',
     status: 'pending',
+    assignment_type: 'assigned',
+    assignee_id: developerId,
+    completion_mode: 'multiple',
     proposer_id: developerId,
     created_at: Date.now(),
   };
@@ -204,6 +272,7 @@ export async function rejectTask(
  * Completes a quest for a member.
  * Checks that the quest is active and no duplicate completion exists,
  * then writes a Quest_Completion record.
+ * For 'first-claim' quests, checks if anyone has already claimed it.
  */
 export async function completeQuest(
   questId: string,
@@ -223,7 +292,12 @@ export async function completeQuest(
     throw new Error(`Cannot complete quest with status '${quest.status}'`);
   }
 
-  // Check for duplicate completion
+  // For 'assigned' quests, verify the member is the assignee
+  if (quest.assignmentType === 'assigned' && quest.assigneeId && quest.assigneeId !== memberId) {
+    throw new Error('This task is assigned to another member');
+  }
+
+  // Check for duplicate completion by this member
   const duplicateFilter: LarkFilter = {
     conjunction: 'and',
     conditions: [
@@ -236,6 +310,21 @@ export async function completeQuest(
 
   if (existingCompletions.length > 0) {
     throw new Error('This quest has already been completed');
+  }
+
+  // For 'first-claim' open quests, check if anyone else already completed it
+  if (quest.assignmentType === 'open' && quest.completionMode === 'first-claim') {
+    const claimFilter: LarkFilter = {
+      conjunction: 'and',
+      conditions: [
+        { field_name: 'quest_id', operator: 'is', value: [questId] },
+      ],
+    };
+
+    const allCompletions = await listRecords(TABLE_IDS.questCompletions, claimFilter);
+    if (allCompletions.length > 0) {
+      throw new Error('This task has already been claimed by another member');
+    }
   }
 
   // Write the Quest_Completion record
