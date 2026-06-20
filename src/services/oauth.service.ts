@@ -121,11 +121,20 @@ export async function exchangeCodeForToken(code: string): Promise<UserTokenRespo
 }
 
 /**
- * Reads the stored session from localStorage.
+ * Reads the stored session from localStorage (preferred) or sessionStorage (legacy fallback).
  * Returns null if no session exists or if the session has expired.
  */
 export function getStoredSession(): StoredSession | null {
-  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+  // Check localStorage first (new), then fall back to sessionStorage (legacy)
+  let raw = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!raw) {
+    raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    // Migrate to localStorage if found in sessionStorage
+    if (raw) {
+      localStorage.setItem(SESSION_STORAGE_KEY, raw);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }
   if (!raw) {
     return null;
   }
@@ -159,10 +168,11 @@ export function storeSession(session: StoredSession): void {
 }
 
 /**
- * Removes the stored session from localStorage.
+ * Removes the stored session from both localStorage and sessionStorage.
  */
 export function clearSession(): void {
   localStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 /**
