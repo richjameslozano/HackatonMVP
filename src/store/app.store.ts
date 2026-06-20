@@ -101,11 +101,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const member = await getCurrentMember(openId);
 
     // Check if this user is a scrum master by fetching all members and checking
-    // if any member's scrum_master_id matches this user's memberId or openId
+    // if any OTHER member's scrum_master_id matches this user's memberId or openId
     let isScrumMaster = false;
     try {
       const allMembers = await listRecords(TABLE_IDS.members);
       for (const rec of allMembers) {
+        // Skip the current user's own record — we're looking for OTHER members
+        // whose scrum_master_id points to this user
+        if (rec.record_id === member.memberId) continue;
+
         const rawSmField = rec.fields.scrum_master_id;
         const smIdText = extractTextValue(rawSmField);
         if (smIdText && (smIdText === member.memberId || smIdText === member.openId)) {
