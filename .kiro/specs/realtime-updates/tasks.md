@@ -112,8 +112,8 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Create `src/services/__tests__/message-validator.test.ts`
     - **Validates: Requirements 3.6, 6.6**
 
-- [ ] 6. Implement frontend WebSocket service
-  - [ ] 6.1 Implement the WebSocket service singleton
+- [x] 6. Implement frontend WebSocket service
+  - [x] 6.1 Implement the WebSocket service singleton
     - Create `src/services/websocket.service.ts` with WebSocketService class
     - Implement connect() establishing WebSocket connection with configurable URL from VITE_WS_URL
     - Implement disconnect() closing connection with code 1000
@@ -138,19 +138,19 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Add to `src/services/__tests__/websocket.service.test.ts`
     - **Validates: Requirements 2.8**
 
-- [ ] 7. Implement frontend message routing and store integration
-  - [ ] 7.1 Implement the message router
+- [x] 7. Implement frontend message routing and store integration
+  - [x] 7.1 Implement the message router
     - Create `src/services/message-router.ts` with routeMessage function
     - Route leaderboard_update → fetchLeaderboard(), quest_update → fetchQuests(), badge_update → handleBadgeUpdate (check current user for celebration)
     - Handle connection_ack by storing connection_id
     - _Requirements: 3.1, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2_
 
-  - [ ] 7.2 Extend Zustand store with connection state
+  - [x] 7.2 Extend Zustand store with connection state
     - Add connectionState field and setConnectionState action to AppState interface in `src/store/app.store.ts`
     - Initialize connectionState as 'disconnected'
     - _Requirements: 2.8_
 
-  - [ ] 7.3 Implement quest routing logic for real-time updates
+  - [x] 7.3 Implement quest routing logic for real-time updates
     - Add helper functions in message-router.ts for quest status transitions: pending → active, pending → rejected, new open quests visibility based on target_role and selectedRole
     - Handle first-claim completion_mode removal from open category
     - Handle unknown quest_id by triggering API fetch
@@ -184,45 +184,45 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Create `src/services/__tests__/event-schema.test.ts`
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
 
-- [ ] 8. Checkpoint - Core services complete
+- [~] 8. Checkpoint - Core services complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Implement frontend UI components and wiring
-  - [ ] 9.1 Create the ConnectionIndicator component
+  - [~] 9.1 Create the ConnectionIndicator component
     - Create `src/components/shared/ConnectionIndicator.tsx`
     - Render green dot + "Live" when connected, yellow dot + "Reconnecting..." when reconnecting, red dot + "Disconnected" + Refresh button when failed
     - Accept ConnectionState prop and optional onRetry callback
     - _Requirements: 2.6, 3.3, 3.5_
 
-  - [ ] 9.2 Wire WebSocket service initialization into App lifecycle
+  - [~] 9.2 Wire WebSocket service initialization into App lifecycle
     - Update `src/App.tsx` to connect WebSocket after authentication, disconnect on logout/unmount
     - Subscribe to state changes and update Zustand connectionState
     - Subscribe to messages and route through message-router
     - Use VITE_WS_URL environment variable for WebSocket URL
     - _Requirements: 2.1, 2.7, 2.8_
 
-  - [ ] 9.3 Integrate ConnectionIndicator into the layout
+  - [~] 9.3 Integrate ConnectionIndicator into the layout
     - Add ConnectionIndicator to `src/components/layout/TopBar.tsx` or AppShell
     - Connect it to Zustand connectionState
     - Wire Refresh button to trigger manual reconnect
     - _Requirements: 2.6, 3.3, 3.5_
 
-  - [ ] 9.4 Add leaderboard rank change animation
+  - [~] 9.4 Add leaderboard rank change animation
     - Update LeaderboardRow component to apply a 300ms visual transition on rank changes
     - Highlight current user's row with distinct background for 3 seconds on rank change
     - _Requirements: 3.2, 3.4_
 
-  - [ ] 9.5 Update environment configuration
+  - [~] 9.5 Update environment configuration
     - Add `VITE_WS_URL` to `.env.example` and frontend `.env`
     - _Requirements: 2.1_
 
 - [ ] 10. Create backend Dockerfile and deployment config
-  - [ ] 10.1 Create Dockerfile for the backend server
+  - [~] 10.1 Create Dockerfile for the backend server
     - Create `backend/Dockerfile` with Python base image, install requirements, run uvicorn
     - Configure to expose port 8000 and run with appropriate worker settings
     - _Requirements: 7.2, 7.4_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [~] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

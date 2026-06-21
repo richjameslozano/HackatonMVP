@@ -9,6 +9,7 @@ import type {
   Badge,
   LarkFilter,
 } from '../types';
+import type { ConnectionState } from '../types/realtime';
 import { getCurrentMember, getScrumMasterForDeveloper } from '../services/member.service';
 import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest, editPendingTask, withdrawPendingTask, resubmitTask } from '../services/quest.service';
 import { evaluateBadgeUnlocks, getBadgeCollection } from '../services/badge.service';
@@ -56,6 +57,9 @@ export interface AppState {
   completionFeedback: CompletionFeedback | null;
   newBadgeUnlocked: boolean;
 
+  // Connection state
+  connectionState: ConnectionState;
+
   // Actions
   initializeApp: (openId: string) => Promise<void>;
   setRole: (role: Role) => void;
@@ -73,6 +77,7 @@ export interface AppState {
   clearNotificationWarning: () => void;
   clearCompletionFeedback: () => void;
   clearNewBadgeUnlocked: () => void;
+  setConnectionState: (state: ConnectionState) => void;
 }
 
 // ─── Store Implementation ───────────────────────────────────────────────────
@@ -96,6 +101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   notificationWarning: null,
   completionFeedback: null,
   newBadgeUnlocked: false,
+  connectionState: 'disconnected' as ConnectionState,
 
   // ─── Actions ────────────────────────────────────────────────────────────
 
@@ -477,5 +483,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearNewBadgeUnlocked: () => {
     set({ newBadgeUnlocked: false });
+  },
+
+  setConnectionState: (connectionState: ConnectionState) => {
+    set({ connectionState });
   },
 }));
