@@ -1,356 +1,290 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { listRecords, getRecord, createRecord, updateRecord } from '../lark-api.service';
-import { resetTokenCache } from '../auth.service';
+
+// ─── Mock the store ─────────────────────────────────────────────────────────
+
+const mockSetBackendError = vi.fn();
+const mockSetBackendWarning = vi.fn();
+
+vi.mock('../../store/app.store', () => ({
+    useAppStore: {
+        getState: () => ({
+            backendError: null,
+            backendWarning: null,
+            setBackendError: mockSetBackendError,
+            setBackendWarning: mockSetBackendWarning,
+        }),
+    },
+}));
+
+// ─── Mock config ────────────────────────────────────────────────────────────
+
+vi.mock('../config', () => ({
+    BACKEND_CONFIG: {
+        baseUrl: 'http://localhost:8000',
+        apiSecret: 'test-shared-secret',
+    },
+    LARK_CONFIG: {
+        appId: 'test-app-id',
+        appSecret: 'test-app-secret',
+        baseAppToken: 'test-base-token',
+        baseUrl: '/lark-api',
+    },
+    TABLE_IDS: {
+        members: 'tblMembers',
+        quests: 'tblQuests',
+    },
+    RETRY_CONFIG: {
+        maxAttempts: 3,
+        timeoutMs: 10_000,
+    },
+}));
 
 // ─── Mock fetch globally ────────────────────────────────────────────────────
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Import after mocks ─────────────────────────────────────────────────────
 
-function mockTokenResponse() {
-    return {
-        ok: true,
-        json: async () => ({
-            code: 0,
-            msg: 'ok',
-            tenant_access_token: 'test-token-123',
-            expire: 7200,
-        }),
-    };
-}
+import { listRecords, getRecord, createRecord, updateRecord } from '../lark-api.service';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function mockSuccessResponse(data: unknown) {
     return {
         ok: true,
-        json: async () => ({ code: 0, msg: 'ok', data }),
+        status: 200,
+        json: async () => data,
+        text: async () => JSON.stringify(data),
     };
 }
 
-function mockErrorResponse(status: number, statusText: string) {
+function mockErrorResponse(status: number) {
     return {
         ok: false,
         status,
-        statusText,
-        json: async () => ({ code: status, msg: statusText }),
+        json: async () => ({ error: `Error ${status}` }),
+        text: async () => `Error ${status}`,
     };
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe('lark-api.service', () => {
+describe('lark-api.service (backend migration)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        resetTokenCache();
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         vi.restoreAllMocks();
     });
 
-    describe('listRecords', () => {
-        it('should fetch records from the search endpoint', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        items: [
-                            { record_id: 'rec1', fields: { name: 'Test Quest' } },
-                            { record_id: 'rec2', fields: { name: 'Another Quest' } },
-                        ],
-                    }),
-                );
+    // ─── Requirement 6.1: Calls go to backend URL ───────────────────────────
 
-            const result = await listRecords('tbl_quests');
-
-            expect(result).toHaveLength(2);
-            expect(result[0]).toEqual({ record_id: 'rec1', fields: { name: 'Test Quest' } });
-            expect(result[1]).toEqual({ record_id: 'rec2', fields: { name: 'Another Quest' } });
-        });
-
-        it('should pass filter and sort to the request body', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }));
-
-            const filter = {
-                conjunction: 'and' as const,
-                conditions: [{ field_name: 'role', operator: 'is' as const, value: ['agent'] }],
-            };
-            const sort = [{ field_name: 'created_at', order: 'desc' as const }];
-
-            await listRecords('tbl_quests', filter, sort);
-
-            const lastCall = mockFetch.mock.calls[1];
-            const body = JSON.parse(lastCall![1]?.body as string) as unknown;
-            expect(body).toEqual({ filter, sort });
-        });
-
-        it('should return empty array when no items exist', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({}));
-
-            const result = await listRecords('tbl_quests');
-            expect(result).toEqual([]);
-        });
-    });
-
-    describe('getRecord', () => {
-        it('should fetch a single record by ID', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        record: { record_id: 'rec1', fields: { name: 'Test' } },
-                    }),
-                );
-
-            const result = await getRecord('tbl_members', 'rec1');
-
-            expect(result).toEqual({ record_id: 'rec1', fields: { name: 'Test' } });
-        });
-
-        it('should throw when record is not found', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({}));
-
-            await expect(getRecord('tbl_members', 'nonexistent')).rejects.toThrow(
-                'getRecord: record not found',
+    describe('backend URL routing', () => {
+        it('listRecords calls POST to {BACKEND_CONFIG.baseUrl}/api/tables/{tableId}/records/search', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ records: [{ record_id: 'rec1', fields: { name: 'Test' } }] }),
             );
-        });
-    });
 
-    describe('createRecord', () => {
-        it('should create a record and return it', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        record: { record_id: 'rec_new', fields: { title: 'New Quest' } },
-                    }),
-                );
+            const promise = listRecords('tblQuests');
+            // Advance timers to resolve any internal timeouts
+            await vi.runAllTimersAsync();
+            await promise;
 
-            const result = await createRecord('tbl_quests', { title: 'New Quest' });
-
-            expect(result).toEqual({ record_id: 'rec_new', fields: { title: 'New Quest' } });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url, options] = mockFetch.mock.calls[0]!;
+            expect(url).toBe('http://localhost:8000/api/tables/tblQuests/records/search');
+            expect(options.method).toBe('POST');
         });
 
-        it('should send fields in the request body', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        record: { record_id: 'rec_new', fields: { title: 'Hello' } },
-                    }),
-                );
-
-            await createRecord('tbl_quests', { title: 'Hello', status: 'pending' });
-
-            const lastCall = mockFetch.mock.calls[1];
-            const body = JSON.parse(lastCall![1]?.body as string) as unknown;
-            expect(body).toEqual({ fields: { title: 'Hello', status: 'pending' } });
-        });
-    });
-
-    describe('updateRecord', () => {
-        it('should update a record and return the updated version', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        record: { record_id: 'rec1', fields: { status: 'active' } },
-                    }),
-                );
-
-            const result = await updateRecord('tbl_quests', 'rec1', { status: 'active' });
-
-            expect(result).toEqual({ record_id: 'rec1', fields: { status: 'active' } });
-        });
-
-        it('should use PUT method', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({
-                        record: { record_id: 'rec1', fields: { status: 'active' } },
-                    }),
-                );
-
-            await updateRecord('tbl_quests', 'rec1', { status: 'active' });
-
-            const lastCall = mockFetch.mock.calls[1];
-            expect(lastCall![1]?.method).toBe('PUT');
-        });
-    });
-
-    describe('retry logic', () => {
-        it('should retry up to 3 times on failure', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockErrorResponse(500, 'Internal Server Error'))
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockErrorResponse(500, 'Internal Server Error'))
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockErrorResponse(500, 'Internal Server Error'));
-
-            await expect(listRecords('tbl_quests')).rejects.toThrow('listRecords failed: 500');
-        });
-
-        it('should succeed on second attempt after first failure', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockErrorResponse(500, 'Internal Server Error'))
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(
-                    mockSuccessResponse({ items: [{ record_id: 'rec1', fields: {} }] }),
-                );
-
-            const result = await listRecords('tbl_quests');
-
-            expect(result).toHaveLength(1);
-        });
-    });
-
-    describe('token management', () => {
-        it('should include Bearer token in Authorization header', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }));
-
-            await listRecords('tbl_quests');
-
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![1]?.headers).toMatchObject({
-                Authorization: 'Bearer test-token-123',
-            });
-        });
-
-        it('should cache token across multiple calls', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }))
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }));
-
-            await listRecords('tbl_quests');
-            await listRecords('tbl_quests');
-
-            // Token should only be fetched once (first call), then cached for the second
-            const tokenCalls = mockFetch.mock.calls.filter(
-                (call) => (call[0] as string).includes('tenant_access_token'),
+        it('getRecord calls GET to {BACKEND_CONFIG.baseUrl}/api/tables/{tableId}/records/{recordId}', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ record_id: 'rec1', fields: { name: 'Test' } }),
             );
-            expect(tokenCalls).toHaveLength(1);
+
+            const promise = getRecord('tblQuests', 'rec1');
+            await vi.runAllTimersAsync();
+            await promise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url, options] = mockFetch.mock.calls[0]!;
+            expect(url).toBe('http://localhost:8000/api/tables/tblQuests/records/rec1');
+            expect(options.method).toBe('GET');
         });
 
-        it('should throw when token request fails', async () => {
-            mockFetch.mockResolvedValueOnce(mockErrorResponse(401, 'Unauthorized'));
-
-            await expect(listRecords('tbl_quests')).rejects.toThrow('Token fetch failed: 401');
-        });
-
-        it('should throw when Lark returns non-zero code for token', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    code: 10003,
-                    msg: 'Invalid app_id',
-                    tenant_access_token: '',
-                    expire: 0,
-                }),
-            });
-
-            await expect(listRecords('tbl_quests')).rejects.toThrow(
-                'Token fetch error: Invalid app_id (code 10003)',
+        it('createRecord calls POST to {BACKEND_CONFIG.baseUrl}/api/tables/{tableId}/records', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ record_id: 'temp_abc', fields: { title: 'New' } }),
             );
+
+            const promise = createRecord('tblQuests', { title: 'New' });
+            await vi.runAllTimersAsync();
+            await promise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url, options] = mockFetch.mock.calls[0]!;
+            expect(url).toBe('http://localhost:8000/api/tables/tblQuests/records');
+            expect(options.method).toBe('POST');
+        });
+
+        it('updateRecord calls PUT to {BACKEND_CONFIG.baseUrl}/api/tables/{tableId}/records/{recordId}', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ record_id: 'rec1', fields: { status: 'active' } }),
+            );
+
+            const promise = updateRecord('tblQuests', 'rec1', { status: 'active' });
+            await vi.runAllTimersAsync();
+            await promise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            const [url, options] = mockFetch.mock.calls[0]!;
+            expect(url).toBe('http://localhost:8000/api/tables/tblQuests/records/rec1');
+            expect(options.method).toBe('PUT');
+        });
+
+        it('does NOT call Lark API directly (no /open-apis or /lark-api in URL)', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ records: [] }),
+            );
+
+            const promise = listRecords('tblQuests');
+            await vi.runAllTimersAsync();
+            await promise;
+
+            const [url] = mockFetch.mock.calls[0]!;
+            expect(url).not.toContain('/open-apis');
+            expect(url).not.toContain('/lark-api');
+            expect(url).not.toContain('larksuite.com');
         });
     });
 
-    describe('timeout via AbortController', () => {
-        it('should pass an AbortSignal to fetch calls', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }));
+    // ─── Requirement 6.2: Authorization header uses shared secret ────────────
 
-            await listRecords('tbl_quests');
+    describe('Authorization header', () => {
+        it('all requests include Authorization: Bearer {BACKEND_CONFIG.apiSecret} header', async () => {
+            mockFetch.mockResolvedValue(
+                mockSuccessResponse({ records: [], record_id: 'rec1', fields: {} }),
+            );
 
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![1]?.signal).toBeInstanceOf(AbortSignal);
+            const p1 = listRecords('tblQuests');
+            await vi.runAllTimersAsync();
+            await p1;
+
+            const p2 = getRecord('tblQuests', 'rec1');
+            await vi.runAllTimersAsync();
+            await p2;
+
+            const p3 = createRecord('tblQuests', { title: 'x' });
+            await vi.runAllTimersAsync();
+            await p3;
+
+            const p4 = updateRecord('tblQuests', 'rec1', { status: 'done' });
+            await vi.runAllTimersAsync();
+            await p4;
+
+            for (const call of mockFetch.mock.calls) {
+                const options = call[1] as RequestInit;
+                const headers = options.headers as Record<string, string>;
+                expect(headers.Authorization).toBe('Bearer test-shared-secret');
+            }
         });
 
-        it('should throw timeout error when request is aborted', async () => {
-            // Simulate AbortError being thrown immediately (as if the signal was already aborted)
-            const abortError = new DOMException('The operation was aborted.', 'AbortError');
-
-            mockFetch.mockImplementation((url: string) => {
-                if ((url as string).includes('tenant_access_token')) {
-                    return Promise.resolve(mockTokenResponse());
-                }
-                // Immediately reject with AbortError to simulate timeout
-                return Promise.reject(abortError);
-            });
-
-            await expect(listRecords('tbl_quests')).rejects.toThrow(
-                'Request timed out after 10000ms',
+        it('does NOT use tenant_access_token for authorization', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockSuccessResponse({ records: [] }),
             );
+
+            const promise = listRecords('tblQuests');
+            await vi.runAllTimersAsync();
+            await promise;
+
+            // Should only be 1 call (no separate token fetch)
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            // The URL should not be a token endpoint
+            const [url] = mockFetch.mock.calls[0]!;
+            expect(url).not.toContain('tenant_access_token');
         });
     });
 
-    describe('endpoint construction', () => {
-        it('should call the correct search endpoint for listRecords', async () => {
+    // ─── Requirement 6.6: Error banner on 502 and retry after 3 seconds ─────
+
+    describe('HTTP 502 handling', () => {
+        it('on HTTP 502 response, sets backendError state (error banner shown)', async () => {
             mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
-                .mockResolvedValueOnce(mockSuccessResponse({ items: [] }));
-
-            await listRecords('tblMyTable');
-
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![0]).toContain('/bitable/v1/apps/');
-            expect(recordCall![0]).toContain('/tables/tblMyTable/records/search');
-        });
-
-        it('should call the correct endpoint for getRecord', async () => {
-            mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
+                .mockResolvedValueOnce(mockErrorResponse(502))
                 .mockResolvedValueOnce(
-                    mockSuccessResponse({ record: { record_id: 'rec1', fields: {} } }),
+                    mockSuccessResponse({ records: [{ record_id: 'rec1', fields: {} }] }),
                 );
 
-            await getRecord('tblMyTable', 'rec1');
+            const promise = listRecords('tblQuests');
 
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![0]).toContain('/tables/tblMyTable/records/rec1');
-            expect(recordCall![1]?.method).toBe('GET');
+            // Let the first fetch resolve (502), which triggers setBackendError
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(mockSetBackendError).toHaveBeenCalledWith(
+                expect.stringContaining('Retrying'),
+            );
+
+            // Advance 3 seconds for the retry delay
+            await vi.advanceTimersByTimeAsync(3_000);
+            await promise;
         });
 
-        it('should call the correct endpoint for createRecord', async () => {
+        it('on HTTP 502, retries once after 3 seconds', async () => {
             mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
+                .mockResolvedValueOnce(mockErrorResponse(502))
                 .mockResolvedValueOnce(
-                    mockSuccessResponse({ record: { record_id: 'rec1', fields: {} } }),
+                    mockSuccessResponse({ records: [{ record_id: 'rec1', fields: {} }] }),
                 );
 
-            await createRecord('tblMyTable', { title: 'Test' });
+            const promise = listRecords('tblQuests');
 
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![0]).toContain('/tables/tblMyTable/records');
-            expect(recordCall![0]).not.toContain('/search');
-            expect(recordCall![1]?.method).toBe('POST');
+            // Initially only 1 call made
+            await vi.advanceTimersByTimeAsync(0);
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+
+            // Advance less than 3 seconds — no retry yet
+            await vi.advanceTimersByTimeAsync(2_999);
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+
+            // Advance to 3 seconds — retry fires
+            await vi.advanceTimersByTimeAsync(1);
+            await promise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        it('should call the correct endpoint for updateRecord', async () => {
+        it('clears backendError on successful retry', async () => {
             mockFetch
-                .mockResolvedValueOnce(mockTokenResponse())
+                .mockResolvedValueOnce(mockErrorResponse(502))
                 .mockResolvedValueOnce(
-                    mockSuccessResponse({ record: { record_id: 'rec1', fields: {} } }),
+                    mockSuccessResponse({ records: [] }),
                 );
 
-            await updateRecord('tblMyTable', 'rec1', { status: 'active' });
+            const promise = listRecords('tblQuests');
+            await vi.advanceTimersByTimeAsync(3_000);
+            await promise;
 
-            const recordCall = mockFetch.mock.calls[1];
-            expect(recordCall![0]).toContain('/tables/tblMyTable/records/rec1');
-            expect(recordCall![1]?.method).toBe('PUT');
+            // Should clear error after successful retry
+            expect(mockSetBackendError).toHaveBeenCalledWith(null);
+        });
+
+        it('keeps error banner visible if retry also fails', async () => {
+            mockFetch
+                .mockResolvedValueOnce(mockErrorResponse(502))
+                .mockResolvedValueOnce(mockErrorResponse(502));
+
+            const promise = listRecords('tblQuests').catch(() => {});
+            await vi.advanceTimersByTimeAsync(3_000);
+            await promise;
+
+            // Should set a persistent error message
+            expect(mockSetBackendError).toHaveBeenLastCalledWith(
+                expect.stringContaining('unavailable'),
+            );
         });
     });
 });

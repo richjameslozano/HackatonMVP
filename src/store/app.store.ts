@@ -56,6 +56,8 @@ export interface AppState {
 
   // Feedback states
   notificationWarning: string | null;
+  backendError: string | null;
+  backendWarning: string | null;
   completionFeedback: CompletionFeedback | null;
   newBadgeUnlocked: boolean;
 
@@ -77,6 +79,10 @@ export interface AppState {
   fetchLeaderboard: () => Promise<void>;
   fetchBadgeCollection: () => Promise<void>;
   clearNotificationWarning: () => void;
+  clearBackendError: () => void;
+  clearBackendWarning: () => void;
+  setBackendError: (error: string | null) => void;
+  setBackendWarning: (warning: string | null) => void;
   clearCompletionFeedback: () => void;
   clearNewBadgeUnlocked: () => void;
   setConnectionState: (state: ConnectionState) => void;
@@ -101,6 +107,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   badgesLoading: false,
   completedQuestIds: new Set<string>(),
   notificationWarning: null,
+  backendError: null,
+  backendWarning: null,
   completionFeedback: null,
   newBadgeUnlocked: false,
   connectionState: 'disconnected' as ConnectionState,
@@ -481,6 +489,22 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearNotificationWarning: () => {
     set({ notificationWarning: null });
+  },
+
+  clearBackendError: () => {
+    set({ backendError: null });
+  },
+
+  clearBackendWarning: () => {
+    set({ backendWarning: null });
+  },
+
+  setBackendError: (error: string | null) => {
+    set({ backendError: error });
+  },
+
+  setBackendWarning: (warning: string | null) => {
+    set({ backendWarning: warning });
   },
 
   clearCompletionFeedback: () => {

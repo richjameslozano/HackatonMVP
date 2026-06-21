@@ -7,9 +7,13 @@ import type {
   QuestUpdatePayload,
   BadgeUpdatePayload,
   ConnectionAckPayload,
+  CacheUpdatedPayload,
+  WriteFailedPayload,
+  IdReconciliationPayload,
 } from '../types/realtime';
 import type { Badge, TargetRole, Role } from '../types';
 import { useAppStore } from '../store/app.store';
+import { TABLE_IDS } from './config';
 
 // ─── Module-Level State ─────────────────────────────────────────────────────
 
@@ -33,6 +37,15 @@ export function routeMessage(message: EventMessage): void {
       break;
     case 'connection_ack':
       handleConnectionAck(message.payload as ConnectionAckPayload);
+      break;
+    case 'cache_updated':
+      handleCacheUpdated(message.payload as CacheUpdatedPayload);
+      break;
+    case 'write_failed':
+      handleWriteFailed(message.payload as WriteFailedPayload);
+      break;
+    case 'id_reconciliation':
+      handleIdReconciliation(message.payload as IdReconciliationPayload);
       break;
   }
 }
@@ -140,4 +153,112 @@ function handleBadgeUpdate(payload: BadgeUpdatePayload): void {
 
 function handleConnectionAck(payload: ConnectionAckPayload): void {
   connectionId = payload.connection_id;
+}
+
+// ─── Cache Event Handlers ───────────────────────────────────────────────────
+
+/**
+ * Resolves a table_id (Lark table ID) to a logical table name used
+ * for determining which store actions to trigger on cache_updated events.
+ */
+function resolveTableName(tableId: string): string | null {
+  for (const [name, id] of Object.entries(TABLE_IDS)) {
+    if (id === tableId) return name;
+  }
+  return null;
+}
+
+function handleCacheUpdated(payload: CacheUpdatedPayload): void {
+  const store = useAppStore.getState();
+  const tableName = resolveTableName(payload.table_name);
+
+  if (!tableName) {
+    // If it's already a logical table name (e.g. backend sends "quests" directly)
+    // try matching directly
+    if (payload.table_name in TABLE_IDS) {
+      triggerRefetchForTable(payload.table_name, store);
+    }
+    return;
+  }
+
+  triggerRefetchForTable(tableName, store);
+}
+
+function triggerRefetchForTable(tableName: string, store: ReturnType<typeof useAppStore.getState>): void {
+  switch (tableName) {
+    case 'quests':
+    case 'questCompletions':
+      void store.fetchQuests();
+      break;
+    case 'members':
+      // Members change could affect leaderboard and quests
+      void store.fetchLeaderboard();
+      break;
+    case 'badges':
+    case 'badgeEarned':
+      void store.fetchBadgeCollection();
+      void store.fetchLeaderboard();
+      break;
+    default:
+      // For other tables (coinConfig, projects, rewardItems, purchases),
+      // no generic refetch needed at this layer
+      break;
+  }
+}
+
+function handleWriteFailed(payload: WriteFailedPayload): void {
+  const tableName = resolveTableName(payload.table_name) ?? payload.table_name;
+  const warning = `Write failed for record ${payload.record_id} in ${tableName}: ${payload.error}`;
+  useAppStore.setState({ notificationWarning: warning });
+}
+
+function handleIdReconciliation(payload: IdReconciliationPayload): void {
+  const store = useAppStore.getState();
+  const { mappings } = payload;
+
+  if (!mappings || Object.keys(mappings).length === 0) return;
+
+  // Replace temp IDs with permanent IDs in quests
+  const quests = store.quests;
+  if (quests) {
+    let updated = false;
+    const updatedQuests = { ...quests };
+
+    for (const category of Object.keys(updatedQuests) as Array<keyof typeof updatedQuests>) {
+      const questList = updatedQuests[category];
+      if (!questList) continue;
+
+      updatedQuests[category] = questList.map((quest) => {
+        const permanentId = mappings[quest.questId];
+        if (permanentId) {
+          updated = true;
+          return { ...quest, questId: permanentId };
+        }
+        return quest;
+      });
+    }
+
+    if (updated) {
+      useAppStore.setState({ quests: updatedQuests });
+    }
+  }
+
+  // Replace temp IDs in completedQuestIds set
+  const completedQuestIds = store.completedQuestIds;
+  if (completedQuestIds.size > 0) {
+    let setUpdated = false;
+    const newCompletedIds = new Set(completedQuestIds);
+
+    for (const [tempId, permanentId] of Object.entries(mappings)) {
+      if (newCompletedIds.has(tempId)) {
+        newCompletedIds.delete(tempId);
+        newCompletedIds.add(permanentId);
+        setUpdated = true;
+      }
+    }
+
+    if (setUpdated) {
+      useAppStore.setState({ completedQuestIds: newCompletedIds });
+    }
+  }
 }

@@ -75,5 +75,21 @@ async def receive_webhook(request: Request) -> dict:
     if event_message is not None:
         await manager.broadcast(event_message)
 
+    # Step 7b: Cache invalidation via WebhookInvalidator
+    action_type = body.event.get("action_type", "")
+    record_id = body.event.get("record_id", "")
+    if action_type and record_id:
+        try:
+            webhook_invalidator = request.app.state.webhook_invalidator
+            await webhook_invalidator.handle_event(table_id, action_type, record_id)
+        except Exception as exc:
+            logger.error(
+                "WebhookInvalidator failed for table=%s action=%s record=%s: %s",
+                table_id,
+                action_type,
+                record_id,
+                exc,
+            )
+
     # Step 8: Return HTTP 200
     return {"status": "ok"}

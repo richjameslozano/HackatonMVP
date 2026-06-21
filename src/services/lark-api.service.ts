@@ -1,6 +1,106 @@
 import type { LarkFilter, LarkRecord, LarkSort } from '../types';
-import { LARK_CONFIG } from './config';
-import { getTenantToken, withRetry, createTimeoutSignal } from './auth.service';
+import { BACKEND_CONFIG } from './config';
+import { createTimeoutSignal } from './auth.service';
+import { useAppStore } from '../store/app.store';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const RETRY_DELAY_502_MS = 3_000;
+const RETRY_DELAY_503_MS = 10_000;
+
+// ─── Backend Error Handling ─────────────────────────────────────────────────
+
+/**
+ * Checks if an error is a network error (fetch threw, not an HTTP response).
+ */
+function isNetworkError(error: unknown): boolean {
+    if (error instanceof TypeError) return true;
+    if (error instanceof DOMException && error.name === 'AbortError') return true;
+    return false;
+}
+
+/**
+ * Delays execution for the specified number of milliseconds.
+ */
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Wraps a backend API call with connectivity-aware error handling:
+ * - On HTTP 502 or network error: shows error banner, retries once after 3 seconds
+ * - On HTTP 503 (queue full): shows transient warning, retries after 10 seconds (flush interval)
+ * - Other errors: throws immediately for upstream handling
+ */
+async function withBackendRetry<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+        const result = await fn();
+        // On success, clear any previous backend error/warning
+        const store = useAppStore.getState();
+        if (store.backendError) store.setBackendError(null);
+        if (store.backendWarning) store.setBackendWarning(null);
+        return result;
+    } catch (error) {
+        const status = extractHttpStatus(error);
+
+        if (status === 502 || isNetworkError(error)) {
+            // Show error banner for connectivity issues
+            useAppStore.getState().setBackendError(
+                'Temporary connectivity issue with the backend. Retrying...'
+            );
+
+            // Retry once after 3 seconds
+            await delay(RETRY_DELAY_502_MS);
+
+            try {
+                const result = await fn();
+                useAppStore.getState().setBackendError(null);
+                return result;
+            } catch (retryError) {
+                // Retry failed — keep the error banner visible and throw
+                useAppStore.getState().setBackendError(
+                    'Backend is currently unavailable. Please try again later.'
+                );
+                throw retryError;
+            }
+        }
+
+        if (status === 503) {
+            // Show transient warning for queue full
+            useAppStore.getState().setBackendWarning(
+                'Write queue is full. Retrying after flush completes...'
+            );
+
+            // Retry after flush interval (10 seconds)
+            await delay(RETRY_DELAY_503_MS);
+
+            try {
+                const result = await fn();
+                useAppStore.getState().setBackendWarning(null);
+                return result;
+            } catch (retryError) {
+                useAppStore.getState().setBackendWarning(
+                    'Write queue is still full. Please try again in a moment.'
+                );
+                throw retryError;
+            }
+        }
+
+        // For all other errors, re-throw without retry
+        throw error;
+    }
+}
+
+/**
+ * Extracts HTTP status code from an error message (e.g. "listRecords failed: 502").
+ */
+function extractHttpStatus(error: unknown): number | null {
+    if (error instanceof Error) {
+        const match = error.message.match(/failed:\s*(\d{3})/);
+        if (match && match[1]) return parseInt(match[1], 10);
+    }
+    return null;
+}
 
 // ─── Lark Field Value Extraction ────────────────────────────────────────────
 
@@ -36,13 +136,13 @@ export function extractNumberValue(value: unknown): number {
 // ─── URL Construction ───────────────────────────────────────────────────────
 
 function getBaseTableUrl(tableId: string): string {
-    return `${LARK_CONFIG.baseUrl}/bitable/v1/apps/${LARK_CONFIG.baseAppToken}/tables/${tableId}/records`;
+    return `${BACKEND_CONFIG.baseUrl}/api/tables/${tableId}/records`;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Lists records from a Bitable table using the search endpoint.
+ * Lists records from a table using the backend search endpoint.
  * Supports optional filter and sort via request body.
  */
 export async function listRecords(
@@ -50,8 +150,7 @@ export async function listRecords(
     filter?: LarkFilter,
     sort?: LarkSort[]
 ): Promise<LarkRecord[]> {
-    return withRetry(async () => {
-        const token = await getTenantToken();
+    return withBackendRetry(async () => {
         const url = `${getBaseTableUrl(tableId)}/search`;
 
         const body: Record<string, unknown> = {};
@@ -64,7 +163,7 @@ export async function listRecords(
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(body),
@@ -76,16 +175,15 @@ export async function listRecords(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { items?: Array<{ record_id: string; fields: Record<string, unknown> }> };
+                records?: Array<{ record_id: string; fields: Record<string, unknown> }>;
+                total?: number;
             };
 
-            if (!data.data?.items) {
+            if (!data.records) {
                 return [];
             }
 
-            return data.data.items.map((item) => ({
+            return data.records.map((item) => ({
                 record_id: item.record_id,
                 fields: item.fields,
             }));
@@ -96,14 +194,13 @@ export async function listRecords(
 }
 
 /**
- * Gets a single record by ID from a Bitable table.
+ * Gets a single record by ID from a table via the backend.
  */
 export async function getRecord(
     tableId: string,
     recordId: string
 ): Promise<LarkRecord> {
-    return withRetry(async () => {
-        const token = await getTenantToken();
+    return withBackendRetry(async () => {
         const url = `${getBaseTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
@@ -112,7 +209,7 @@ export async function getRecord(
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
                     'Content-Type': 'application/json',
                 },
                 signal,
@@ -123,18 +220,17 @@ export async function getRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { record?: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
-            if (!data.data?.record) {
+            if (!data.record_id) {
                 throw new Error('getRecord: record not found');
             }
 
             return {
-                record_id: data.data.record.record_id,
-                fields: data.data.record.fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();
@@ -143,15 +239,18 @@ export async function getRecord(
 }
 
 /**
- * Creates a new record in a Bitable table.
+ * Creates a new record in a table via the backend.
+ * If sync=true, the record is created directly in Lark (returns permanent ID).
+ * If sync=false (default), it's queued for batch flush (returns temp ID).
  */
 export async function createRecord(
     tableId: string,
-    fields: Record<string, unknown>
+    fields: Record<string, unknown>,
+    options?: { sync?: boolean }
 ): Promise<LarkRecord> {
-    return withRetry(async () => {
-        const token = await getTenantToken();
-        const url = getBaseTableUrl(tableId);
+    return withBackendRetry(async () => {
+        const syncParam = options?.sync ? '?sync=true' : '';
+        const url = `${getBaseTableUrl(tableId)}${syncParam}`;
 
         const { signal, cleanup } = createTimeoutSignal();
 
@@ -159,7 +258,7 @@ export async function createRecord(
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ fields }),
@@ -172,18 +271,13 @@ export async function createRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { record: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
-            if (data.code !== 0) {
-                throw new Error(`createRecord API error: ${data.msg} (code ${data.code})`);
-            }
-
             return {
-                record_id: data.data.record.record_id,
-                fields: data.data.record.fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();
@@ -192,15 +286,14 @@ export async function createRecord(
 }
 
 /**
- * Updates an existing record in a Bitable table.
+ * Updates an existing record in a table via the backend.
  */
 export async function updateRecord(
     tableId: string,
     recordId: string,
     fields: Record<string, unknown>
 ): Promise<LarkRecord> {
-    return withRetry(async () => {
-        const token = await getTenantToken();
+    return withBackendRetry(async () => {
         const url = `${getBaseTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
@@ -209,7 +302,7 @@ export async function updateRecord(
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ fields }),
@@ -221,54 +314,13 @@ export async function updateRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data?: { record?: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
-            if (data.code !== 0) {
-                throw new Error(`updateRecord API error: ${data.msg} (code ${data.code})`);
-            }
-
-            // Lark API may not always return the full record in the response
-            if (data.data?.record) {
-                return {
-                    record_id: data.data.record.record_id,
-                    fields: data.data.record.fields,
-                };
-            }
-
-            // Fallback: re-fetch the record to get the updated state
-            const refetchUrl = `${getBaseTableUrl(tableId)}/${recordId}`;
-            const { signal: refetchSignal, cleanup: refetchCleanup } = createTimeoutSignal();
-            try {
-                const refetchResponse = await fetch(refetchUrl, {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    signal: refetchSignal,
-                });
-                if (refetchResponse.ok) {
-                    const refetchData = (await refetchResponse.json()) as {
-                        data?: { record?: { record_id: string; fields: Record<string, unknown> } };
-                    };
-                    if (refetchData.data?.record) {
-                        return {
-                            record_id: refetchData.data.record.record_id,
-                            fields: refetchData.data.record.fields,
-                        };
-                    }
-                }
-            } finally {
-                refetchCleanup();
-            }
-
-            // Last resort: return what we know
             return {
-                record_id: recordId,
-                fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();

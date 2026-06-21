@@ -330,7 +330,7 @@ export async function proposeTask(
     fields.difficulty = difficulty;
   }
 
-  const record = await createRecord(TABLE_IDS.quests, fields);
+  const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
   return mapRecordToQuest(record);
 }
 
@@ -378,7 +378,7 @@ export async function createAdminTask(
     created_at: Date.now(),
   };
 
-  const record = await createRecord(TABLE_IDS.quests, fields);
+  const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
   return mapRecordToQuest(record);
 }
 
@@ -500,7 +500,7 @@ export async function completeQuest(
   };
 
   // If coins_awarded persistence fails, do NOT mark quest as completed — throw error
-  const completionRecord = await createRecord(TABLE_IDS.questCompletions, completionFields);
+  const completionRecord = await createRecord(TABLE_IDS.questCompletions, completionFields, { sync: true });
   return mapRecordToCompletion(completionRecord);
 }
 
@@ -630,6 +630,6 @@ export async function resubmitTask(
     created_at: Date.now(),
   };
 
-  const record = await createRecord(TABLE_IDS.quests, fields);
+  const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
   return mapRecordToQuest(record);
 }

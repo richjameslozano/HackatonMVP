@@ -7,6 +7,9 @@ const VALID_TYPES: Set<EventType> = new Set([
   'quest_update',
   'badge_update',
   'connection_ack',
+  'cache_updated',
+  'write_failed',
+  'id_reconciliation',
 ]);
 
 export function validateEventMessage(raw: unknown): EventMessage | null {

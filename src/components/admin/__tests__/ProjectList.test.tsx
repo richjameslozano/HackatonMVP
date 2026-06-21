@@ -26,7 +26,7 @@ describe('ProjectList', () => {
     render(<ProjectList />);
 
     await waitFor(() => {
-      expect(screen.getByText('No projects found.')).toBeInTheDocument();
+      expect(screen.getByText('No projects found. Add one to get started.')).toBeInTheDocument();
     });
   });
 

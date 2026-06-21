@@ -8,8 +8,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import webhook, ws, health
+from app.routers import webhook, ws, health, tables
+from app.services.cache import create_cache
 from app.services.connection_manager import manager
+from app.services.flush_scheduler import FlushScheduler
+from app.services.lark_client import LarkClient
+from app.services.webhook_invalidator import WebhookInvalidator
+from app.services.write_queue import WriteQueue
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +33,51 @@ async def _heartbeat_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifespan: start heartbeat on startup, cancel on shutdown."""
+    """Manage application lifespan: start services on startup, clean up on shutdown."""
+    # ─── Heartbeat ───────────────────────────────────────────────────────────
     heartbeat_task = asyncio.create_task(_heartbeat_loop())
     logger.info("Heartbeat background task started (interval=%ds)", HEARTBEAT_INTERVAL_SECONDS)
+
+    # ─── Cache & Services ────────────────────────────────────────────────────
+    cache = create_cache(settings)
+    write_queue = WriteQueue(max_size=settings.write_queue_max_size)
+    lark_client = LarkClient(settings)
+    flush_scheduler = FlushScheduler(
+        queue=write_queue,
+        cache=cache,
+        lark_client=lark_client,
+        settings=settings,
+        ws_manager=manager,
+    )
+    webhook_invalidator = WebhookInvalidator(
+        cache=cache,
+        queue=write_queue,
+        lark_client=lark_client,
+        ws_manager=manager,
+    )
+
+    # Store services on app.state for access from routers
+    app.state.cache = cache
+    app.state.write_queue = write_queue
+    app.state.lark_client = lark_client
+    app.state.flush_scheduler = flush_scheduler
+    app.state.webhook_invalidator = webhook_invalidator
+
+    # Start flush scheduler
+    await flush_scheduler.start()
+
+    logger.info(
+        "Cache TTL=%ds, Flush interval=%ds",
+        settings.cache_ttl_seconds,
+        settings.batch_flush_interval_seconds,
+    )
+
     yield
+
+    # ─── Shutdown ────────────────────────────────────────────────────────────
+    await flush_scheduler.stop()
+    await lark_client.close()
+
     heartbeat_task.cancel()
     try:
         await heartbeat_task
@@ -60,3 +106,4 @@ app.add_middleware(
 app.include_router(webhook.router, tags=["webhook"])
 app.include_router(ws.router, tags=["websocket"])
 app.include_router(health.router, tags=["health"])
+app.include_router(tables.router, tags=["tables"])

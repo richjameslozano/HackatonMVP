@@ -50,6 +50,9 @@ export async function createMemberRecord(
     scrum_master_id: null,
   };
 
-  const record = await createRecord(TABLE_IDS.members, fields);
+  // Use sync=true to get a permanent Lark record ID immediately.
+  // Member IDs are used as foreign keys in other records (assignee_id, proposer_id),
+  // so they must not be temporary.
+  const record = await createRecord(TABLE_IDS.members, fields, { sync: true });
   return mapRecordToMember(record);
 }
