@@ -21,9 +21,17 @@ export function mapRecordToMember(record: LarkRecord): Member {
 
 function parseRoles(value: unknown): Member['roles'] {
   if (Array.isArray(value)) {
-    return value.filter(
-      (v): v is 'agent' | 'developer' => v === 'agent' || v === 'developer'
-    );
+    const parsed: string[] = [];
+    for (const v of value) {
+      if (typeof v === 'string') {
+        const role = parseSingleRole(v);
+        if (role) parsed.push(role);
+      } else if (typeof v === 'object' && v !== null && 'text' in v) {
+        const role = parseSingleRole((v as { text: string }).text);
+        if (role) parsed.push(role);
+      }
+    }
+    return parsed.length > 0 ? (parsed as Member['roles']) : ['agent'];
   }
   if (typeof value === 'string') {
     const role = parseSingleRole(value);
@@ -32,12 +40,13 @@ function parseRoles(value: unknown): Member['roles'] {
   return ['agent'];
 }
 
-function parseSingleRole(value: unknown): 'agent' | 'developer' | null {
-  if (value === 'agent' || value === 'developer') return value;
+function parseSingleRole(value: unknown): 'agent' | 'developer' | 'admin' | null {
+  if (value === 'agent' || value === 'developer' || value === 'admin') return value;
   if (typeof value === 'string') {
     const lower = value.toLowerCase().trim();
     if (lower === 'agent') return 'agent';
     if (lower === 'developer') return 'developer';
+    if (lower === 'admin') return 'admin';
   }
   return null;
 }

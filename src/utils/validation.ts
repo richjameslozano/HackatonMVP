@@ -97,3 +97,69 @@ export function validateProjectSelection(projectIds: string[]): ValidationResult
   }
   return { valid: true };
 }
+
+// ─── Reward Item Validation ─────────────────────────────────────────────────
+
+/**
+ * Validates reward item title: 1–100 characters, not whitespace-only.
+ */
+export function validateRewardItemTitle(title: string): ValidationResult {
+  if (!title || title.trim().length === 0) {
+    return { valid: false, error: 'Title is required and must not be whitespace-only' };
+  }
+  if (title.length > 100) {
+    return { valid: false, error: 'Title must be 100 characters or fewer' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates reward item description: 0–500 characters.
+ */
+export function validateRewardItemDescription(description: string): ValidationResult {
+  if (description.length > 500) {
+    return { valid: false, error: 'Description must be 500 characters or fewer' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates reward item cost: positive integer between 1 and 100,000.
+ */
+export function validateRewardItemCost(value: unknown): ValidationResult {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 100000) {
+    return { valid: false, error: 'Cost must be a positive integer between 1 and 100,000' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates stock quantity: -1 (unlimited) or positive integer > 0.
+ */
+export function validateStockQuantity(value: unknown): ValidationResult {
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    return { valid: false, error: 'Stock quantity must be an integer' };
+  }
+  if (value === -1) {
+    return { valid: true };
+  }
+  if (value <= 0) {
+    return { valid: false, error: 'Stock quantity must be -1 (unlimited) or a positive integer' };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates image URL: empty string (optional) or valid URL format.
+ */
+export function validateImageUrl(url: string): ValidationResult {
+  if (url === '') {
+    return { valid: true };
+  }
+  try {
+    new URL(url);
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'Image URL must be a valid URL or empty' };
+  }
+}

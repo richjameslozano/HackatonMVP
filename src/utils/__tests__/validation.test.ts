@@ -115,6 +115,10 @@ import {
   validateCoinValue,
   validateAdminTaskTitle,
   validateAdminTaskDescription,
+  validateRewardItemTitle,
+  validateRewardItemDescription,
+  validateRewardItemCost,
+  validateStockQuantity,
 } from '../validation';
 
 // Feature: coin-store-system, Property 1: Difficulty validation accepts only valid values
@@ -323,6 +327,235 @@ describe('Property 11: Admin task form field validation', () => {
           fc.string({ minLength: 501, maxLength: 600 }),
           (input) => {
             const result = validateAdminTaskDescription(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+});
+
+
+// Feature: coin-spending-store, Property 7: Reward item field validation
+// **Validates: Requirements 6.3, 6.4**
+describe('Property 7: Reward item field validation', () => {
+  describe('Reward item title validation', () => {
+    it('accepts non-whitespace-only strings with 1–100 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 1, maxLength: 100 }).filter((s) => s.trim().length > 0),
+          (input) => {
+            const result = validateRewardItemTitle(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects empty strings', () => {
+      const result = validateRewardItemTitle('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('rejects whitespace-only strings', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 100 }).map((len) => ' '.repeat(len)),
+          (input) => {
+            const result = validateRewardItemTitle(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects strings exceeding 100 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 101, maxLength: 200 }),
+          (input) => {
+            const result = validateRewardItemTitle(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  describe('Reward item description validation', () => {
+    it('accepts strings with 0–500 characters (including empty)', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 0, maxLength: 500 }),
+          (input) => {
+            const result = validateRewardItemDescription(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects strings exceeding 500 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 501, maxLength: 600 }),
+          (input) => {
+            const result = validateRewardItemDescription(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  describe('Reward item cost validation', () => {
+    it('accepts positive integers in [1, 100000]', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 100000 }),
+          (input) => {
+            const result = validateRewardItemCost(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects zero, negatives, and values > 100000', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(0),
+            fc.integer({ max: -1 }),
+            fc.integer({ min: 100001 })
+          ),
+          (input) => {
+            const result = validateRewardItemCost(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects floats (non-integers)', () => {
+      fc.assert(
+        fc.property(
+          fc.double({ min: 0.01, max: 100000, noInteger: true }),
+          (input) => {
+            const result = validateRewardItemCost(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects NaN and non-numeric types', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(NaN),
+            fc.string(),
+            fc.boolean(),
+            fc.constant(null),
+            fc.constant(undefined)
+          ),
+          (input) => {
+            const result = validateRewardItemCost(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  describe('Stock quantity validation', () => {
+    it('accepts -1 (unlimited stock)', () => {
+      const result = validateStockQuantity(-1);
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('accepts positive integers > 0', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 1000000 }),
+          (input) => {
+            const result = validateStockQuantity(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects 0', () => {
+      const result = validateStockQuantity(0);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('rejects negative values other than -1', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ max: -2 }),
+          (input) => {
+            const result = validateStockQuantity(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects non-integers (floats)', () => {
+      fc.assert(
+        fc.property(
+          fc.double({ min: -100, max: 100, noInteger: true }),
+          (input) => {
+            const result = validateStockQuantity(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects NaN and non-numeric types', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(NaN),
+            fc.string(),
+            fc.boolean(),
+            fc.constant(null),
+            fc.constant(undefined)
+          ),
+          (input) => {
+            const result = validateStockQuantity(input);
             expect(result.valid).toBe(false);
             expect(result.error).toBeDefined();
           }

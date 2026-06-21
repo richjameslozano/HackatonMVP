@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import { truncateDescription, formatCoinBalance } from '../formatting';
 
-// ─── Property 7: Description truncation at 200 characters ───────────────────
-// Feature: coin-store-system, Property 7: Description truncation at 200 characters
-// **Validates: Requirements 4.2**
+// ─── Property 7: Description truncation at 150 characters ───────────────────
+// Feature: coin-spending-store, Property 3: Description truncation at 150 characters
+// **Validates: Requirements 2.1**
 
-describe('truncateDescription - Property 7', () => {
-  it('returns original string unchanged when length <= 200', () => {
+describe('truncateDescription - Property 3', () => {
+  it('returns original string unchanged when length <= 150', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 0, maxLength: 200 }),
+        fc.string({ minLength: 0, maxLength: 150 }),
         (input) => {
           const result = truncateDescription(input);
           expect(result).toBe(input);
@@ -20,26 +20,26 @@ describe('truncateDescription - Property 7', () => {
     );
   });
 
-  it('truncates strings longer than 200 to first 200 chars + "..."', () => {
+  it('truncates strings longer than 150 to first 150 chars + "…"', () => {
     fc.assert(
       fc.property(
-        fc.string({ minLength: 201, maxLength: 500 }),
+        fc.string({ minLength: 151, maxLength: 500 }),
         (input) => {
           const result = truncateDescription(input);
-          expect(result).toBe(input.slice(0, 200) + '...');
+          expect(result).toBe(input.slice(0, 150) + '\u2026');
         }
       ),
       { numRuns: 100 }
     );
   });
 
-  it('output never exceeds 203 characters', () => {
+  it('output never exceeds 151 characters', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 0, maxLength: 500 }),
         (input) => {
           const result = truncateDescription(input);
-          expect(result.length).toBeLessThanOrEqual(203);
+          expect(result.length).toBeLessThanOrEqual(151);
         }
       ),
       { numRuns: 100 }

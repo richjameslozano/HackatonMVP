@@ -3,15 +3,17 @@ import { ProjectList } from '../components/admin/ProjectList';
 import { ProjectDetail } from '../components/admin/ProjectDetail';
 import { AdminTaskForm } from '../components/admin/AdminTaskForm';
 import { CoinConfigPanel } from '../components/admin/CoinConfigPanel';
+import { RewardAdminPanel } from '../components/admin/RewardAdminPanel';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type Tab = 'projects' | 'create-task' | 'coin-settings';
+type Tab = 'projects' | 'create-task' | 'coin-settings' | 'rewards';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'projects', label: 'Projects' },
   { id: 'create-task', label: 'Create Task' },
   { id: 'coin-settings', label: 'Coin Settings' },
+  { id: 'rewards', label: 'Rewards' },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -40,6 +42,9 @@ export function AdminPage() {
 
       case 'coin-settings':
         return <CoinConfigPanel />;
+
+      case 'rewards':
+        return <RewardAdminPanel />;
     }
   }
 

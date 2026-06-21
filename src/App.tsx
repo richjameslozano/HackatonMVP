@@ -15,6 +15,7 @@ import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { AdminPage } from './pages/AdminPage';
+import { StorePage } from './pages/StorePage';
 
 function App() {
   const authMember = useAuthStore((s) => s.currentMember);
@@ -62,6 +63,7 @@ function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/badges" element={<BadgeCollectionPage />} />
           <Route path="/command-center" element={<CommandCenterPage />} />
+          <Route path="/store" element={<StorePage />} />
           <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
           <Route path="/" element={<Navigate to="/quests" replace />} />
           <Route path="*" element={<Navigate to="/quests" replace />} />

@@ -1,6 +1,6 @@
 // ─── Role and Category Types ────────────────────────────────────────────────
 
-export type Role = 'agent' | 'developer';
+export type Role = 'agent' | 'developer' | 'admin';
 
 export type TargetRole = Role | 'all';
 
@@ -120,6 +120,27 @@ export interface LeaderboardEntry {
   member: Member;
   badgeCount: number;
   rank: number;
+}
+
+// ─── Reward Store Types ─────────────────────────────────────────────────────
+
+export interface RewardItem {
+  itemId: string;
+  title: string;
+  description: string;
+  cost: number;
+  imageUrl: string | null;
+  stockQuantity: number; // -1 for unlimited, 0+ for finite
+  isActive: boolean;
+}
+
+export interface PurchaseRecord {
+  purchaseId: string;
+  memberId: string;
+  rewardItemId: string;
+  rewardItemTitle: string; // denormalized for history display
+  coinsSpent: number;
+  purchasedAt: number; // Unix timestamp in milliseconds
 }
 
 // ─── Lark API Types ─────────────────────────────────────────────────────────
