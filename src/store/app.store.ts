@@ -103,19 +103,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     const member = await getCurrentMember(openId);
 
     // Check if this user is a scrum master by fetching all members and checking
-    // if any OTHER member's scrum_master_id matches this user's memberId or openId.
+    // if any member's scrum_master_id matches this user's memberId or openId.
+    // Also check if the current user's own roles include scrum_master indicators.
     // Also collect the IDs of developers managed by this user.
     let isScrumMaster = false;
     const managedDeveloperIds: string[] = [];
     try {
       const allMembers = await listRecords(TABLE_IDS.members);
       for (const rec of allMembers) {
-        // Skip the current user's own record — we're looking for OTHER members
-        // whose scrum_master_id points to this user
-        if (rec.record_id === member.memberId) continue;
-
+        // Include current user's own record in check (they might reference themselves)
         const rawSmField = rec.fields.scrum_master_id;
         let isManaged = false;
+
+        // Skip self for managed developers list, but still check SM indicators
+        if (rec.record_id === member.memberId) {
+          // Check if own record has scrum_master role indicator
+          const rolesField = rec.fields.roles;
+          if (Array.isArray(rolesField)) {
+            for (const role of rolesField) {
+              const roleStr = typeof role === 'string' ? role : (typeof role === 'object' && role !== null && 'text' in role ? (role as { text: string }).text : '');
+              if (roleStr.toLowerCase().includes('scrum') || roleStr.toLowerCase().includes('master') || roleStr.toLowerCase() === 'sm') {
+                isScrumMaster = true;
+              }
+            }
+          }
+          if (typeof rolesField === 'string') {
+            if (rolesField.toLowerCase().includes('scrum') || rolesField.toLowerCase().includes('master') || rolesField.toLowerCase() === 'sm') {
+              isScrumMaster = true;
+            }
+          }
+          // Check if scrum_master_id points to self (self-referencing means "I am the SM")
+          const ownSmId = extractTextValue(rawSmField);
+          if (ownSmId && (ownSmId === member.memberId || ownSmId === member.openId)) {
+            isScrumMaster = true;
+          }
+          continue;
+        }
+
         const smIdText = extractTextValue(rawSmField);
         if (smIdText && (smIdText === member.memberId || smIdText === member.openId)) {
           isManaged = true;
@@ -141,8 +165,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           managedDeveloperIds.push(rec.record_id);
         }
       }
-    } catch {
-      isScrumMaster = false;
+    } catch (err) {
+      console.error('[initializeApp] Failed to check scrum master status:', err);
+      // Don't reset isScrumMaster if it was already set from own roles check
     }
 
     // Restore role from sessionStorage or use primary role

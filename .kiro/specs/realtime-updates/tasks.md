@@ -25,8 +25,8 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Configure CORS from environment variable CORS_ORIGINS
     - _Requirements: 7.2_
 
-- [ ] 2. Implement backend WebSocket connection management
-  - [ ] 2.1 Implement the ConnectionManager service
+- [x] 2. Implement backend WebSocket connection management
+  - [x] 2.1 Implement the ConnectionManager service
     - Create `backend/app/services/connection_manager.py` with ConnectionManager class
     - Implement connect() accepting WebSocket, assigning connection_id, enforcing max_connections (50), sending connection_ack
     - Implement disconnect() removing connection from active set
@@ -36,7 +36,7 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Reject new connections with 503 when limit reached
     - _Requirements: 7.2, 7.3, 7.5, 1.8_
 
-  - [ ] 2.2 Implement the WebSocket endpoint
+  - [x] 2.2 Implement the WebSocket endpoint
     - Create `backend/app/routers/ws.py` with WebSocket `/ws` endpoint
     - Accept connection via ConnectionManager, handle incoming messages, detect disconnection
     - Handle pong responses from clients to keep connections alive
@@ -46,14 +46,14 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Test connect/disconnect lifecycle, max connections enforcement (503), broadcast to multiple clients, ping timeout removal
     - _Requirements: 7.2, 7.3_
 
-- [ ] 3. Implement backend webhook processing
-  - [ ] 3.1 Implement the Event Mapper service
+- [x] 3. Implement backend webhook processing
+  - [x] 3.1 Implement the Event Mapper service
     - Create `backend/app/services/event_mapper.py` with TABLE_ID_MAP and map_webhook_to_event function
     - Map quest_completions → leaderboard_update, quests → quest_update, badge_earned → badge_update
     - Return None for unrecognized tables
     - _Requirements: 1.4, 1.5, 1.6, 1.7_
 
-  - [ ] 3.2 Implement the Webhook Router endpoint
+  - [x] 3.2 Implement the Webhook Router endpoint
     - Create `backend/app/routers/webhook.py` with POST `/webhook/lark` endpoint
     - Validate Content-Length ≤ 1 MB (HTTP 413 if exceeded)
     - Handle URL verification challenge (return `{"challenge": body.challenge}`)
@@ -62,7 +62,7 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Acknowledge unrecognized tables with HTTP 200 (no broadcast)
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9_
 
-  - [ ] 3.3 Implement the Health endpoint
+  - [x] 3.3 Implement the Health endpoint
     - Create `backend/app/routers/health.py` with GET `/health` returning connection count and uptime in seconds
     - _Requirements: 7.1_
 

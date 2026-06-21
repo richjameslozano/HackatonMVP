@@ -3,6 +3,10 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 
+# Type alias for event types used across the backend
+EventType = Literal["leaderboard_update",
+                    "quest_update", "badge_update", "connection_ack"]
+
 
 class LarkWebhookPayload(BaseModel):
     """Incoming Lark Base webhook request body."""
@@ -50,6 +54,6 @@ class ConnectionAckPayload(BaseModel):
 class EventMessage(BaseModel):
     """WebSocket event message broadcast to connected clients."""
 
-    type: Literal["leaderboard_update", "quest_update", "badge_update", "connection_ack"]
+    type: EventType
     payload: dict
     timestamp: str  # ISO 8601 UTC
