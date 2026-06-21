@@ -1,4 +1,6 @@
 import { useAppStore } from '../../store/app.store';
+import { ConnectionIndicator } from '../shared/ConnectionIndicator';
+import { websocketService } from '../../services/websocket.service';
 
 interface TopBarProps {
     onMenuClick: () => void;
@@ -6,6 +8,11 @@ interface TopBarProps {
 
 export function TopBar({ onMenuClick }: TopBarProps) {
     const currentMember = useAppStore((s) => s.currentMember);
+    const connectionState = useAppStore((s) => s.connectionState);
+
+    const handleRetry = () => {
+        websocketService.connect();
+    };
 
     return (
         <header className="flex items-center gap-4 border-b border-surface-200 bg-white px-4 py-3 sm:px-6">
@@ -33,6 +40,9 @@ export function TopBar({ onMenuClick }: TopBarProps) {
                     aria-label="Search quests"
                 />
             </div>
+
+            {/* Connection status indicator */}
+            <ConnectionIndicator state={connectionState} onRetry={handleRetry} />
 
             {/* Right side icons */}
             <div className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { LeaderboardEntry, Badge } from '../../types';
 import { getMemberBadgeBreakdown } from '../../services/leaderboard.service';
 import { BadgeBreakdownPopover } from './BadgeBreakdownPopover';
@@ -14,6 +14,34 @@ export function LeaderboardRow({ entry, isCurrentUser, previousRank }: Leaderboa
   const [showBadges, setShowBadges] = useState(false);
   const [badgeData, setBadgeData] = useState<Array<{ badge: Badge; earnedAt: Date }> | null>(null);
   const [badgeLoading, setBadgeLoading] = useState(false);
+  const [rankChangeHighlight, setRankChangeHighlight] = useState(false);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Detect rank changes and trigger highlight for current user
+  const hasRankChanged = previousRank !== null && previousRank !== entry.rank;
+
+  useEffect(() => {
+    if (isCurrentUser && hasRankChanged) {
+      setRankChangeHighlight(true);
+
+      // Clear any existing timer
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+
+      // Remove highlight after 3 seconds
+      highlightTimerRef.current = setTimeout(() => {
+        setRankChangeHighlight(false);
+        highlightTimerRef.current = null;
+      }, 3000);
+    }
+
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, [isCurrentUser, hasRankChanged, entry.rank]);
 
   const loadBadgeBreakdown = useCallback(async () => {
     if (badgeData !== null) return;
@@ -47,9 +75,11 @@ export function LeaderboardRow({ entry, isCurrentUser, previousRank }: Leaderboa
 
   return (
     <tr
-      className={`relative cursor-pointer transition-colors ${isCurrentUser
-          ? 'bg-madrid-50 hover:bg-madrid-100'
-          : 'hover:bg-surface-50'
+      className={`relative cursor-pointer transition-all duration-300 ${rankChangeHighlight
+          ? 'bg-madrid-100'
+          : isCurrentUser
+            ? 'bg-madrid-50 hover:bg-madrid-100'
+            : 'hover:bg-surface-50'
         }`}
       aria-label={
         isCurrentUser

@@ -4,3 +4,4 @@ export { ConfirmationToast } from './ConfirmationToast';
 export { ValidationError } from './ValidationError';
 export { CompletionAnimation } from './CompletionAnimation';
 export { ConfettiAnimation } from './ConfettiAnimation';
+export { ConnectionIndicator } from './ConnectionIndicator';

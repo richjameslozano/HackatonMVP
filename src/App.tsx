@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/app.store';
 import { useAuthStore } from './store/auth.store';
+import { websocketService } from './services/websocket.service';
+import { routeMessage } from './services/message-router';
 import { AppShell } from './components/layout/AppShell';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { QuestBoardPage } from './pages/QuestBoardPage';
@@ -15,6 +17,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 function App() {
   const authMember = useAuthStore((s) => s.currentMember);
   const initializeApp = useAppStore((s) => s.initializeApp);
+  const setConnectionState = useAppStore((s) => s.setConnectionState);
 
   // When the auth store resolves a member, initialize the app store with their openId
   useEffect(() => {
@@ -22,6 +25,26 @@ function App() {
       void initializeApp(authMember.openId);
     }
   }, [authMember, initializeApp]);
+
+  // WebSocket lifecycle: connect after authentication, disconnect on logout/unmount
+  useEffect(() => {
+    if (!authMember?.openId) return;
+
+    // Connect WebSocket (uses VITE_WS_URL by default)
+    websocketService.connect();
+
+    // Subscribe to connection state changes and update Zustand store
+    const unsubState = websocketService.onStateChange(setConnectionState);
+
+    // Subscribe to incoming messages and route them through message-router
+    const unsubMessage = websocketService.onMessage(routeMessage);
+
+    return () => {
+      unsubState();
+      unsubMessage();
+      websocketService.disconnect();
+    };
+  }, [authMember?.openId, setConnectionState]);
 
   return (
     <Routes>
