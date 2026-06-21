@@ -222,7 +222,7 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Configure to expose port 8000 and run with appropriate worker settings
     - _Requirements: 7.2, 7.4_
 
-- [-] 11. Final checkpoint - Ensure all tests pass
+- [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
