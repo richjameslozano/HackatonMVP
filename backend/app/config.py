@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    lark_verification_token: str = ""
+    lark_verification_token: str = "5QUyXj2SETuDUQtr7pJaLcwiPua7bSmP"
     cors_origins: str = "http://localhost:5173"
     max_connections: int = 50
 

@@ -90,16 +90,16 @@ This plan implements a real-time data push architecture for the SP Madrid Gamifi
     - Use hypothesis with minimum 100 iterations
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
 
-- [ ] 4. Checkpoint - Backend complete
+- [x] 4. Checkpoint - Backend complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Implement frontend TypeScript types and message validation
-  - [ ] 5.1 Create real-time event type definitions
+- [x] 5. Implement frontend TypeScript types and message validation
+  - [x] 5.1 Create real-time event type definitions
     - Create `src/types/realtime.ts` with EventType, EventMessage, LeaderboardUpdatePayload, QuestUpdatePayload, BadgeUpdatePayload, ConnectionAckPayload interfaces
     - Export ConnectionState type: 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'failed'
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 5.2 Implement the message validator
+  - [x] 5.2 Implement the message validator
     - Create `src/services/message-validator.ts` with validateEventMessage function
     - Validate required top-level fields (type, payload, timestamp), valid type enum, payload is object
     - Return null for invalid messages, log warning to console
