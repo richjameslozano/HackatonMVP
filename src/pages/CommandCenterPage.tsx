@@ -63,7 +63,8 @@ export function CommandCenterPage() {
             setOverview(overviewData);
             setRecentActivity(activityData);
 
-            // Fetch pending tasks for the PendingReviews widget
+            // Fetch pending tasks for the PendingReviews widget — only from managed developers
+            const managedDevIds = new Set(overviewData.developers.map((d) => d.member.memberId));
             const pendingFilter = {
                 conjunction: 'and' as const,
                 conditions: [
@@ -79,15 +80,21 @@ export function CommandCenterPage() {
                 memberNameMap.set(dev.member.memberId, dev.member.displayName);
             }
 
-            const pendingItems = pendingRecords.map((r) => {
-                const proposerId = extractTextValue(r.fields.proposer_id);
-                return {
-                    questId: r.record_id,
-                    title: extractTextValue(r.fields.title) || 'Untitled Task',
-                    proposerName: memberNameMap.get(proposerId) || proposerId || 'Unknown',
-                    createdAt: r.fields.created_at ? new Date(r.fields.created_at as string | number) : new Date(),
-                };
-            });
+            // Only include pending tasks from developers managed by this SM
+            const pendingItems = pendingRecords
+                .filter((r) => {
+                    const proposerId = extractTextValue(r.fields.proposer_id);
+                    return managedDevIds.has(proposerId);
+                })
+                .map((r) => {
+                    const proposerId = extractTextValue(r.fields.proposer_id);
+                    return {
+                        questId: r.record_id,
+                        title: extractTextValue(r.fields.title) || 'Untitled Task',
+                        proposerName: memberNameMap.get(proposerId) || proposerId || 'Unknown',
+                        createdAt: r.fields.created_at ? new Date(r.fields.created_at as string | number) : new Date(),
+                    };
+                });
             setPendingTasks(pendingItems);
         } catch (err) {
             console.error('[CommandCenter] Failed to load data:', err);
