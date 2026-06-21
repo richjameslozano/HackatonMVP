@@ -1,41 +1,84 @@
-# Product Overview
+---
+inclusion: always
+---
 
-SP Madrid Gamified Tracker is a gamified task and onboarding tracking system for SP Madrid & Associates, a BPO company with AI-driven tech solutions.
+# Product Context: SP Madrid Gamified Tracker
 
-## Core Concept
+Gamified task and onboarding tracker for SP Madrid & Associates (BPO company). Turns onboarding steps, daily tasks, and sprint work into **quests**. Employees earn **badges** upon completing quests. Progress is shown on role-separated leaderboards.
 
-The system turns onboarding steps, daily tasks, and sprint work into quests. Employees earn badges upon completing quests. Progress is surfaced via role-separated leaderboards. No XP or points — badges tied to quest completions are the sole reward mechanism.
+## Reward System Rules
 
-## User Roles
+- Badges are the **only** reward mechanism. There are no XP points or currency.
+- Badges are awarded automatically when a member's quest completion count meets the badge threshold.
+- Never implement XP, points, coins, or any numeric reward beyond badge thresholds.
 
-- **Agent**: BPO operations staff who complete onboarding quests, daily tasks, and milestone quests
-- **Developer**: Tech team members who propose sprint tasks, complete approved tasks, and earn developer-specific badges
-- **Scrum Master**: Team lead who reviews, approves, or rejects developer-proposed tasks
-- **Admin**: Manages Lark Base tables directly (no admin UI in the app)
+## User Roles & Permissions
 
-## Key Mechanics
+| Role | Can Do | Cannot Do |
+|------|--------|-----------|
+| Agent | Complete assigned/open quests, view own badges & leaderboard | Propose tasks, approve tasks |
+| Developer | Propose sprint tasks, complete approved tasks, view badges & leaderboard | Approve own tasks |
+| Scrum Master | Approve/reject developer proposals, view team progress | Complete quests on behalf of others |
+| Admin | Manage Lark Base tables directly | No in-app admin UI exists |
 
-- Developer tasks require Scrum Master approval before counting toward progress (prevents self-farming)
-- Badges are awarded automatically when quest completion thresholds are met
-- Leaderboards are separated by role track (Agent vs Developer)
-- Lark Bot sends notifications for task proposals and approval/rejection decisions
+When implementing features, always enforce these role boundaries. A developer must never be able to approve their own proposed task.
 
-## Architecture Summary
+## Architecture Constraints
 
-Frontend-only MVP (React SPA) connected to Lark Base via the Lark Base API. No separate backend server. Lark Base is the single source of truth. A Lark Bot handles notifications.
+- **Frontend-only MVP**: React SPA calls Lark Base API directly. No custom backend for data operations.
+- **Backend (WebSocket relay only)**: A lightweight FastAPI server exists solely to relay Lark webhook events to connected clients via WebSocket. It does NOT handle CRUD — all data reads/writes go through the Lark Base REST API from the frontend.
+- **Single source of truth**: Lark Base tables. The app never persists data locally beyond the browser session.
+- **Notifications**: Lark Bot IM API sends messages for task proposals and approval/rejection decisions.
+
+## Data Model (Lark Base Tables)
+
+| Table | Purpose |
+|-------|---------|
+| Members | User profiles with `role`, `open_id`, `name` |
+| Quests | Task definitions with `assignment_type`, `status`, `role_track`, `category` |
+| Quest_Completions | Records of who completed which quest and when |
+| Badges | Badge definitions with `threshold` (number of completions required) |
+| Badge_Earned | Junction table linking members to earned badges |
+
+Always reference these table names exactly when working with the service layer.
 
 ## Quest Assignment Types
 
-Each quest has an `assignment_type` field that controls who can see and complete it:
+The `assignment_type` field controls visibility and completion eligibility:
 
-- **`all`** — Everyone with the matching role sees it and can complete it. Used for standard quests like "Complete onboarding step 1" that every agent must do.
-- **`assigned`** — Only the specific person in `assignee_id` sees it. Used for developer sprint tasks — when a developer proposes a task, it's assigned to them specifically. Nobody else can complete it.
-- **`open`** — Everyone sees it, but it's optional/claimable. Combined with `completion_mode`:
-  - `multiple` — anyone can complete it (group quest)
-  - `first-claim` — first person to complete it "claims" it, blocking others
+- **`all`** — Every member with the matching role sees and can complete it (e.g., onboarding steps).
+- **`assigned`** — Only the member in `assignee_id` sees it. Used for developer sprint tasks after Scrum Master approval.
+- **`open`** — Visible to all, optional. Behavior depends on `completion_mode`:
+  - `multiple` — any number of members can complete it (group quest).
+  - `first-claim` — first member to complete it claims it; others are blocked.
+
+When filtering quests for display, always apply `assignment_type` logic to determine visibility.
 
 ## Quest Statuses
 
-- **`active`** — Quest is available for completion
-- **`pending`** — Developer-proposed task awaiting Scrum Master approval
-- **`rejected`** — Task was rejected by Scrum Master (or withdrawn by proposer)
+- **`active`** — Available for completion.
+- **`pending`** — Developer-proposed task awaiting Scrum Master approval. Must not appear in the main quest board for the proposer until approved.
+- **`rejected`** — Rejected by Scrum Master or withdrawn. Should be visually distinct and non-completable.
+
+## Developer Task Proposal Flow
+
+1. Developer submits a proposed task (creates quest with `status: pending`, `assignment_type: assigned`).
+2. Lark Bot notifies the Scrum Master.
+3. Scrum Master approves → status becomes `active`. Or rejects → status becomes `rejected`.
+4. Lark Bot notifies the Developer of the decision.
+5. Only after approval can the developer complete the task and earn badge progress.
+
+This flow is critical for preventing self-farming. Never skip the approval step for developer-proposed tasks.
+
+## Leaderboard Rules
+
+- Leaderboards are separated by role track: **Agent** and **Developer** are distinct rankings.
+- Ranking is based on total badge count (not quest completion count).
+- Time period filters (weekly, monthly, all-time) scope the completions window used for badge evaluation.
+
+## Key Business Logic to Preserve
+
+- A quest completion only counts toward badges if the quest `status` is `active` at the time of completion.
+- Badge thresholds are evaluated against the Quest_Completions table, not a cached counter.
+- Members can only see quests matching their `role` field (agent quests for agents, developer quests for developers).
+- Scrum Masters see a command center with team progress, pending reviews, and blockers — not the regular quest board.

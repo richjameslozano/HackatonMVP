@@ -266,10 +266,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       throw err;
     }
 
-    // Evaluate badge unlocks and refresh data in parallel (non-blocking)
+    // Evaluate badge unlocks (non-blocking). Skip full quest refetch —
+    // the optimistic update already reflects the completion in the UI.
+    // Real-time WebSocket events will reconcile any server-side state changes.
     const [unlockedBadges] = await Promise.all([
       evaluateBadgeUnlocks(currentMember.memberId, selectedRole),
-      get().fetchQuests(),
       get().fetchLeaderboard(),
       get().fetchBadgeCollection(),
     ]);
