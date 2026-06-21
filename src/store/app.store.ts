@@ -3,6 +3,7 @@ import type {
   Member,
   Quest,
   Role,
+  Difficulty,
   CategorizedQuests,
   LeaderboardEntry,
   BadgeCollectionView,
@@ -17,6 +18,7 @@ import { getLeaderboard, type TimePeriod } from '../services/leaderboard.service
 import { notifyTaskProposal, notifyApproval, notifyRejection, notifyTaskEdit, notifyTaskWithdrawal } from '../services/notification.service';
 import { listRecords, extractTextValue } from '../services/lark-api.service';
 import { TABLE_IDS } from '../services/config';
+import { useCoinStore } from './coin.store';
 
 // ─── Session Storage Key ────────────────────────────────────────────────────
 
@@ -66,7 +68,7 @@ export interface AppState {
   setLeaderboardTimePeriod: (period: TimePeriod) => void;
   fetchQuests: () => Promise<void>;
   completeQuest: (questId: string) => Promise<void>;
-  proposeTask: (title: string, description: string) => Promise<void>;
+  proposeTask: (title: string, description: string, difficulty?: Difficulty) => Promise<void>;
   approveTask: (questId: string) => Promise<void>;
   rejectTask: (questId: string, reason: string) => Promise<void>;
   editPendingTask: (questId: string, title: string, description: string) => Promise<void>;
@@ -266,6 +268,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       throw err;
     }
 
+    // Refresh coin balance (fire-and-forget)
+    void useCoinStore.getState().refreshBalance(currentMember.memberId);
+
     // Evaluate badge unlocks (non-blocking). Skip full quest refetch —
     // the optimistic update already reflects the completion in the UI.
     // Real-time WebSocket events will reconcile any server-side state changes.
@@ -285,13 +290,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  proposeTask: async (title: string, description: string) => {
+  proposeTask: async (title: string, description: string, difficulty?: Difficulty) => {
     const { currentMember } = get();
     if (!currentMember) return;
 
     let quest;
     try {
-      quest = await proposeTask(title, description, currentMember.memberId);
+      quest = await proposeTask(title, description, currentMember.memberId, difficulty);
     } catch (err) {
       console.error('[proposeTask] Failed:', err);
       throw err;

@@ -7,13 +7,16 @@ import type {
   TargetRole,
   AssignmentType,
   CompletionMode,
+  Difficulty,
   LarkFilter,
   LarkRecord,
 } from '../types';
-import { listRecords, getRecord, createRecord, updateRecord, extractTextValue } from './lark-api.service';
+import { listRecords, getRecord, createRecord, updateRecord, extractTextValue, extractNumberValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
-import { validateTaskTitle, validateTaskDescription, validateRejectionReason } from '../utils/validation';
+import { validateTaskTitle, validateTaskDescription, validateRejectionReason, validateAdminTaskTitle, validateAdminTaskDescription, validateDifficulty, validateProjectSelection } from '../utils/validation';
 import { canCompleteQuest } from '../utils/permissions';
+import { awardCoinsForCompletion } from './coin.service';
+import { serializeProjectIds } from '../utils/project-ids';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
 
@@ -83,6 +86,8 @@ function mapRecordToQuest(record: LarkRecord): Quest {
     originalQuestId: extractTextValue(fields.original_quest_id) || null,
     editHistory,
     withdrawn,
+    difficulty: parseDifficulty(extractTextValue(fields.difficulty)),
+    projectIds: parseProjectIds(extractTextValue(fields.project_ids)),
   };
 }
 
@@ -135,6 +140,21 @@ function parseStatus(value: unknown): Quest['status'] {
   return 'pending';
 }
 
+function parseDifficulty(value: unknown): Difficulty | null {
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim();
+    if (lower === 'easy' || lower === 'medium' || lower === 'hard') return lower;
+  }
+  return null;
+}
+
+function parseProjectIds(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return value.split(',').map((id) => id.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 /**
  * Maps a raw Lark record to a QuestCompletion domain object.
  */
@@ -145,6 +165,7 @@ function mapRecordToCompletion(record: LarkRecord): QuestCompletion {
     memberId: extractTextValue(fields.member_id),
     questId: extractTextValue(fields.quest_id),
     completedAt: fields.completed_at ? new Date(fields.completed_at as string | number) : new Date(),
+    coinsAwarded: extractNumberValue(fields.coins_awarded),
   };
 }
 
@@ -278,7 +299,8 @@ export async function getQuestsForRole(
 export async function proposeTask(
   title: string,
   description: string,
-  developerId: string
+  developerId: string,
+  difficulty?: Difficulty
 ): Promise<Quest> {
   const titleValidation = validateTaskTitle(title);
   if (!titleValidation.valid) {
@@ -300,6 +322,59 @@ export async function proposeTask(
     assignee_id: developerId,
     completion_mode: 'multiple',
     proposer_id: developerId,
+    created_at: Date.now(),
+  };
+
+  // Persist difficulty if provided
+  if (difficulty) {
+    fields.difficulty = difficulty;
+  }
+
+  const record = await createRecord(TABLE_IDS.quests, fields);
+  return mapRecordToQuest(record);
+}
+
+/**
+ * Creates a new admin task with the given parameters.
+ * Creates a quest with status 'active', the given difficulty, target role,
+ * and project_ids (serialized via serializeProjectIds).
+ */
+export async function createAdminTask(
+  title: string,
+  description: string,
+  difficulty: Difficulty,
+  targetRole: TargetRole,
+  projectIds: string[]
+): Promise<Quest> {
+  const titleValidation = validateAdminTaskTitle(title);
+  if (!titleValidation.valid) {
+    throw new Error(titleValidation.error ?? 'Invalid title');
+  }
+
+  const descValidation = validateAdminTaskDescription(description);
+  if (!descValidation.valid) {
+    throw new Error(descValidation.error ?? 'Invalid description');
+  }
+
+  const difficultyValidation = validateDifficulty(difficulty);
+  if (!difficultyValidation.valid) {
+    throw new Error(difficultyValidation.error ?? 'Invalid difficulty');
+  }
+
+  const projectValidation = validateProjectSelection(projectIds);
+  if (!projectValidation.valid) {
+    throw new Error(projectValidation.error ?? 'At least one project must be selected');
+  }
+
+  const fields: Record<string, unknown> = {
+    title: title.trim(),
+    description: description.trim(),
+    status: 'active',
+    difficulty,
+    target_role: targetRole,
+    assignment_type: 'all',
+    completion_mode: 'multiple',
+    project_ids: serializeProjectIds(projectIds),
     created_at: Date.now(),
   };
 
@@ -413,13 +488,18 @@ export async function completeQuest(
     }
   }
 
-  // Write the Quest_Completion record
+  // Calculate coin reward based on quest difficulty
+  const coinAmount = await awardCoinsForCompletion(questId, quest.difficulty);
+
+  // Write the Quest_Completion record with coins_awarded
   const completionFields: Record<string, unknown> = {
     member_id: memberId,
     quest_id: questId,
     completed_at: new Date().toISOString(),
+    coins_awarded: coinAmount,
   };
 
+  // If coins_awarded persistence fails, do NOT mark quest as completed — throw error
   const completionRecord = await createRecord(TABLE_IDS.questCompletions, completionFields);
   return mapRecordToCompletion(completionRecord);
 }

@@ -3,7 +3,7 @@ import { useAppStore } from '../store/app.store';
 import { QuestCategory, PendingTaskCard, ProposeTaskForm, ResubmitTaskModal } from '../components/quest';
 import { LoadingIndicator, CompletionAnimation, ConfirmationToast, ConfettiAnimation } from '../components/shared';
 import { canResubmitTask } from '../utils/permissions';
-import type { Quest } from '../types';
+import type { Quest, Difficulty } from '../types';
 
 interface ToastState {
   message: string;
@@ -47,9 +47,9 @@ export function QuestBoardPage() {
   );
 
   const handlePropose = useCallback(
-    async (title: string, description: string) => {
+    async (title: string, description: string, difficulty: Difficulty) => {
       try {
-        await storeProposeTask(title, description);
+        await storeProposeTask(title, description, difficulty);
         setToast({ message: 'Task proposed successfully!', type: 'success' });
       } catch {
         setToast({ message: 'Failed to propose task. Please try again.', type: 'warning' });

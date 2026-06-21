@@ -6,6 +6,7 @@ import { websocketService } from './services/websocket.service';
 import { routeMessage } from './services/message-router';
 import { AppShell } from './components/layout/AppShell';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { AdminGuard } from './components/auth/AdminGuard';
 import { QuestBoardPage } from './pages/QuestBoardPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { BadgeCollectionPage } from './pages/BadgeCollectionPage';
@@ -13,6 +14,7 @@ import { CommandCenterPage } from './pages/CommandCenterPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { AdminPage } from './pages/AdminPage';
 
 function App() {
   const authMember = useAuthStore((s) => s.currentMember);
@@ -60,6 +62,7 @@ function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/badges" element={<BadgeCollectionPage />} />
           <Route path="/command-center" element={<CommandCenterPage />} />
+          <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
           <Route path="/" element={<Navigate to="/quests" replace />} />
           <Route path="*" element={<Navigate to="/quests" replace />} />
         </Route>

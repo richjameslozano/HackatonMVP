@@ -106,3 +106,229 @@ describe('validateRejectionReason', () => {
     expect(result.error).toBeUndefined();
   });
 });
+
+// ─── Property-Based Tests (fast-check) ──────────────────────────────────────
+
+import * as fc from 'fast-check';
+import {
+  validateDifficulty,
+  validateCoinValue,
+  validateAdminTaskTitle,
+  validateAdminTaskDescription,
+} from '../validation';
+
+// Feature: coin-store-system, Property 1: Difficulty validation accepts only valid values
+// **Validates: Requirements 1.1, 1.4**
+describe('Property 1: Difficulty validation accepts only valid values', () => {
+  it('returns valid=true for any valid difficulty value', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom('easy', 'medium', 'hard'),
+        (input) => {
+          const result = validateDifficulty(input);
+          expect(result.valid).toBe(true);
+          expect(result.error).toBeUndefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns valid=false for any arbitrary string that is not easy/medium/hard', () => {
+    fc.assert(
+      fc.property(
+        fc.string().filter((s) => s !== 'easy' && s !== 'medium' && s !== 'hard'),
+        (input) => {
+          const result = validateDifficulty(input);
+          expect(result.valid).toBe(false);
+          expect(result.error).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns valid=false for non-string types', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.integer(),
+          fc.double(),
+          fc.boolean(),
+          fc.constant(null),
+          fc.constant(undefined),
+          fc.constant([]),
+          fc.constant({})
+        ),
+        (input) => {
+          const result = validateDifficulty(input);
+          expect(result.valid).toBe(false);
+          expect(result.error).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+// Feature: coin-store-system, Property 5: Coin value validation range
+// **Validates: Requirements 3.3, 3.5**
+describe('Property 5: Coin value validation range', () => {
+  it('returns valid=true for any positive integer in [1, 10000]', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 10000 }),
+        (input) => {
+          const result = validateCoinValue(input);
+          expect(result.valid).toBe(true);
+          expect(result.error).toBeUndefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns valid=false for zero, negatives, and values > 10000', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.constant(0),
+          fc.integer({ max: -1 }),
+          fc.integer({ min: 10001 })
+        ),
+        (input) => {
+          const result = validateCoinValue(input);
+          expect(result.valid).toBe(false);
+          expect(result.error).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns valid=false for decimals (non-integers)', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.01, max: 10000, noInteger: true }),
+        (input) => {
+          const result = validateCoinValue(input);
+          expect(result.valid).toBe(false);
+          expect(result.error).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('returns valid=false for NaN and non-numeric types', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.constant(NaN),
+          fc.string(),
+          fc.boolean(),
+          fc.constant(null),
+          fc.constant(undefined),
+          fc.constant([]),
+          fc.constant({})
+        ),
+        (input) => {
+          const result = validateCoinValue(input);
+          expect(result.valid).toBe(false);
+          expect(result.error).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+// Feature: coin-store-system, Property 11: Admin task form field validation
+// **Validates: Requirements 5.5, 5.7**
+describe('Property 11: Admin task form field validation', () => {
+  describe('Admin task title validation', () => {
+    it('accepts non-whitespace-only strings with 1–100 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 1, maxLength: 100 }).filter((s) => s.trim().length > 0),
+          (input) => {
+            const result = validateAdminTaskTitle(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects empty strings', () => {
+      const result = validateAdminTaskTitle('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('rejects whitespace-only strings', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 100 }).map((len) => ' '.repeat(len)),
+          (input) => {
+            const result = validateAdminTaskTitle(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects strings exceeding 100 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 101, maxLength: 200 }),
+          (input) => {
+            const result = validateAdminTaskTitle(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  describe('Admin task description validation', () => {
+    it('accepts non-empty strings with 1–500 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 1, maxLength: 500 }),
+          (input) => {
+            const result = validateAdminTaskDescription(input);
+            expect(result.valid).toBe(true);
+            expect(result.error).toBeUndefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('rejects empty strings', () => {
+      const result = validateAdminTaskDescription('');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('rejects strings exceeding 500 characters', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 501, maxLength: 600 }),
+          (input) => {
+            const result = validateAdminTaskDescription(input);
+            expect(result.valid).toBe(false);
+            expect(result.error).toBeDefined();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+});

@@ -12,6 +12,22 @@ export type AssignmentType = 'all' | 'assigned' | 'open';
 
 export type CompletionMode = 'multiple' | 'first-claim';
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+// ─── Coin & Project Interfaces ──────────────────────────────────────────────
+
+export interface CoinConfig {
+  easy_coins: number;
+  medium_coins: number;
+  hard_coins: number;
+}
+
+export interface Project {
+  projectId: string;
+  name: string;
+  description: string;
+}
+
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
 
 export interface Member {
@@ -45,6 +61,8 @@ export interface Quest {
   originalQuestId?: string | null;
   editHistory?: QuestEditHistoryEntry[];
   withdrawn?: boolean;
+  difficulty: Difficulty | null;
+  projectIds: string[];
 }
 
 export interface QuestCompletion {
@@ -52,6 +70,7 @@ export interface QuestCompletion {
   memberId: string;
   questId: string;
   completedAt: Date;
+  coinsAwarded: number;
 }
 
 export interface Badge {

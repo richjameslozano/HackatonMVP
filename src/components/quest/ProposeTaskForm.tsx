@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { validateTaskTitle, validateTaskDescription } from '../../utils/validation';
 import { ValidationError } from '../shared';
+import { DifficultySelector } from '../shared/DifficultySelector';
+import type { Difficulty } from '../../types';
 
 interface ProposeTaskFormProps {
-  onSubmit: (title: string, description: string) => Promise<void>;
+  onSubmit: (title: string, description: string, difficulty: Difficulty) => Promise<void>;
 }
 
 export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [submitting, setSubmitting] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descTouched, setDescTouched] = useState(false);
@@ -26,6 +29,7 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     setShowModal(false);
     setTitle('');
     setDescription('');
+    setDifficulty('easy');
     setTitleTouched(false);
     setDescTouched(false);
   }
@@ -39,7 +43,7 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), description.trim());
+      await onSubmit(title.trim(), description.trim(), difficulty);
       handleClose();
     } finally {
       setSubmitting(false);
@@ -153,6 +157,8 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
                   </span>
                 </div>
               </div>
+
+              <DifficultySelector value={difficulty} onChange={setDifficulty} />
 
               <div className="flex gap-3 pt-2">
                 <button

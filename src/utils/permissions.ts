@@ -56,3 +56,11 @@ export function canEditPendingTask(quest: Quest, viewerId: string): boolean {
 export function canResubmitTask(quest: Quest, viewerId: string): boolean {
   return quest.status === 'rejected' && quest.proposerId === viewerId && !quest.withdrawn;
 }
+
+/**
+ * Returns true if the member has the admin role.
+ * Used to gate access to the Admin View page.
+ */
+export function isAdmin(member: Member): boolean {
+  return (member.roles as string[]).includes('admin');
+}

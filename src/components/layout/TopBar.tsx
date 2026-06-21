@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { useAppStore } from '../../store/app.store';
+import { useCoinStore } from '../../store/coin.store';
 import { ConnectionIndicator } from '../shared/ConnectionIndicator';
+import { CoinBalance } from './CoinBalance';
 import { websocketService } from '../../services/websocket.service';
 
 interface TopBarProps {
@@ -9,6 +12,13 @@ interface TopBarProps {
 export function TopBar({ onMenuClick }: TopBarProps) {
     const currentMember = useAppStore((s) => s.currentMember);
     const connectionState = useAppStore((s) => s.connectionState);
+
+    // Fetch coin balance on mount when member is available
+    useEffect(() => {
+        if (currentMember?.memberId) {
+            useCoinStore.getState().fetchBalance(currentMember.memberId);
+        }
+    }, [currentMember?.memberId]);
 
     const handleRetry = () => {
         websocketService.connect();
@@ -46,6 +56,9 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
             {/* Right side icons */}
             <div className="flex items-center gap-2">
+                {/* Coin balance */}
+                <CoinBalance />
+
                 {/* Notifications bell */}
                 <button
                     type="button"
