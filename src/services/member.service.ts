@@ -1,5 +1,5 @@
 import type { Member, LarkFilter, LarkRecord } from '../types';
-import { listRecords, getRecord, extractTextValue } from './lark-api.service';
+import { listRecords, getRecord, updateRecord, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
@@ -118,4 +118,53 @@ export async function getScrumMasterForDeveloper(developerId: string): Promise<M
 
   // Fallback: try as record_id
   return getMemberById(developer.scrumMasterId);
+}
+
+// ─── Project Member Management (Admin) ──────────────────────────────────────
+
+/**
+ * Lists all members in the system.
+ */
+export async function listAllMembers(): Promise<Member[]> {
+  const records = await listRecords(TABLE_IDS.members);
+  return records.map(mapRecordToMember);
+}
+
+/**
+ * Lists members that are assigned to a specific project.
+ */
+export async function getMembersForProject(projectId: string): Promise<Member[]> {
+  const filter: LarkFilter = {
+    conjunction: 'and',
+    conditions: [
+      {
+        field_name: 'project_id',
+        operator: 'is',
+        value: [projectId],
+      },
+    ],
+  };
+
+  const records = await listRecords(TABLE_IDS.members, filter);
+  return records.map(mapRecordToMember);
+}
+
+/**
+ * Assigns a member to a project by updating their project_id field.
+ */
+export async function assignMemberToProject(memberId: string, projectId: string): Promise<Member> {
+  const record = await updateRecord(TABLE_IDS.members, memberId, {
+    project_id: projectId,
+  });
+  return mapRecordToMember(record);
+}
+
+/**
+ * Removes a member from their current project by clearing project_id.
+ */
+export async function removeMemberFromProject(memberId: string): Promise<Member> {
+  const record = await updateRecord(TABLE_IDS.members, memberId, {
+    project_id: '',
+  });
+  return mapRecordToMember(record);
 }

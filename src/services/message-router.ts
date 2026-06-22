@@ -13,6 +13,7 @@ import type {
 } from '../types/realtime';
 import type { Badge, TargetRole, Role } from '../types';
 import { useAppStore } from '../store/app.store';
+import { useCoinStore } from '../store/coin.store';
 import { TABLE_IDS } from './config';
 
 // ─── Module-Level State ─────────────────────────────────────────────────────
@@ -189,6 +190,10 @@ function triggerRefetchForTable(tableName: string, store: ReturnType<typeof useA
     case 'quests':
     case 'questCompletions':
       void store.fetchQuests();
+      // Quest completions affect coin balance
+      if (tableName === 'questCompletions' && store.currentMember) {
+        void useCoinStore.getState().refreshBalance(store.currentMember.memberId);
+      }
       break;
     case 'members':
       // Members change could affect leaderboard and quests
@@ -199,8 +204,20 @@ function triggerRefetchForTable(tableName: string, store: ReturnType<typeof useA
       void store.fetchBadgeCollection();
       void store.fetchLeaderboard();
       break;
+    case 'coinConfig':
+      // Coin config change affects displayed balance
+      if (store.currentMember) {
+        void useCoinStore.getState().refreshBalance(store.currentMember.memberId);
+      }
+      break;
+    case 'purchases':
+      // Purchase affects coin balance
+      if (store.currentMember) {
+        void useCoinStore.getState().refreshBalance(store.currentMember.memberId);
+      }
+      break;
     default:
-      // For other tables (coinConfig, projects, rewardItems, purchases),
+      // For other tables (projects, rewardItems),
       // no generic refetch needed at this layer
       break;
   }

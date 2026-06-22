@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { Quest } from '../../types';
 import { LoadingIndicator } from '../shared/LoadingIndicator';
 import { ErrorBanner } from '../shared/ErrorBanner';
 import { getProject } from '../../services/project.service';
+import { ProjectMemberManager } from './ProjectMemberManager';
 import type { Project } from '../../types';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -69,10 +69,8 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         </div>
       )}
 
-      {/* Quest List Placeholder — full implementation in task 7.4 */}
-      <div className="rounded-xl border border-[#3c494e] bg-[#201f21] px-4 py-8 text-center">
-        <p className="text-sm text-[#859398]">Quest list for this project will be displayed here.</p>
-      </div>
+      {/* Project Members Management */}
+      <ProjectMemberManager projectId={projectId} />
     </div>
   );
 }
