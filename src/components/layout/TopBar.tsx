@@ -36,18 +36,8 @@ export function TopBar({ onMenuClick }: TopBarProps) {
                 <span className="material-symbols-outlined text-xl">menu</span>
             </button>
 
-            {/* Search — pill shape with darker bg */}
-            <div className="relative flex-1 max-w-md">
-                <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#859398] text-lg">
-                    search
-                </span>
-                <input
-                    type="text"
-                    placeholder="Filter Quests..."
-                    className="w-full rounded-full bg-[#1c1b1d] border border-[#3c494e] py-2 pl-10 pr-4 text-sm text-[#e5e1e4] placeholder-[#859398] focus:border-[#3cd7ff] focus:outline-none transition-colors"
-                    aria-label="Filter quests"
-                />
-            </div>
+            {/* Search removed — was non-functional */}
+            <div className="flex-1" />
 
             {/* Connection status indicator */}
             <ConnectionIndicator state={connectionState} onRetry={handleRetry} />

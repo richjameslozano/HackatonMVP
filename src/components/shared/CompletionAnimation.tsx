@@ -30,18 +30,19 @@ export function CompletionAnimation({ visible, onComplete }: CompletionAnimation
     >
       <div className={`flex flex-col items-center gap-2 ${animating ? 'animate-completion' : ''}`}>
         <svg
-          className="h-20 w-20 text-green-500"
+          className="h-20 w-20 text-[#00d4ff]"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 12px rgba(0, 212, 255, 0.6))' }}
         >
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
-        <span className="text-lg font-semibold text-green-700">Quest Complete!</span>
+        <span className="text-lg font-semibold text-[#3cd7ff]">Quest Complete!</span>
       </div>
     </div>
   );
