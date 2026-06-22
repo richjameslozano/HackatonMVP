@@ -122,28 +122,28 @@ export function CoinConfigPanel() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-madrid-500 border-t-transparent" />
-        <span className="ml-2 text-sm text-gray-500">Loading coin configuration...</span>
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00d4ff] border-t-transparent" />
+        <span className="ml-2 text-sm text-[#859398]">Loading coin configuration...</span>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-lg">
-      <h2 className="text-lg font-semibold text-gray-900">Coin Configuration</h2>
-      <p className="mt-1 text-sm text-gray-500">
+      <h2 className="text-lg font-semibold text-[#e5e1e4]">Coin Configuration</h2>
+      <p className="mt-1 text-sm text-[#859398]">
         Set the number of coins awarded for each difficulty level.
       </p>
 
       {/* Success Toast */}
       {successMessage && (
         <div
-          className="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-green-800 bg-green-900/30 px-4 py-3"
           role="status"
           aria-live="polite"
         >
           <svg
-            className="h-5 w-5 shrink-0 text-green-500"
+            className="h-5 w-5 shrink-0 text-green-400"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -154,18 +154,18 @@ export function CoinConfigPanel() {
               clipRule="evenodd"
             />
           </svg>
-          <p className="text-sm font-medium text-green-700">{successMessage}</p>
+          <p className="text-sm font-medium text-green-400">{successMessage}</p>
         </div>
       )}
 
       {/* Error Banner */}
       {errorMessage && (
         <div
-          className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-red-800 bg-red-900/30 px-4 py-3"
           role="alert"
         >
           <svg
-            className="h-5 w-5 shrink-0 text-red-500"
+            className="h-5 w-5 shrink-0 text-red-400"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -176,7 +176,7 @@ export function CoinConfigPanel() {
               clipRule="evenodd"
             />
           </svg>
-          <p className="text-sm text-red-700">{errorMessage}</p>
+          <p className="text-sm text-red-400">{errorMessage}</p>
         </div>
       )}
 
@@ -184,7 +184,7 @@ export function CoinConfigPanel() {
       <form onSubmit={handleSave} className="mt-6 space-y-5">
         {/* Easy Coins */}
         <div>
-          <label htmlFor="easy_coins" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="easy_coins" className="block text-sm font-medium text-[#bbc9cf]">
             Easy Quest Coins
           </label>
           <input
@@ -194,16 +194,15 @@ export function CoinConfigPanel() {
             max={10000}
             value={formValues.easy_coins}
             onChange={(e) => handleChange('easy_coins', e.target.value)}
-            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-              fieldErrors.easy_coins
-                ? 'border-red-300 focus:ring-red-500'
-                : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${fieldErrors.easy_coins
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-[#3c494e]'
+              }`}
             aria-invalid={!!fieldErrors.easy_coins}
             aria-describedby={fieldErrors.easy_coins ? 'easy_coins-error' : undefined}
           />
           {fieldErrors.easy_coins && (
-            <p id="easy_coins-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="easy_coins-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.easy_coins}
             </p>
           )}
@@ -211,7 +210,7 @@ export function CoinConfigPanel() {
 
         {/* Medium Coins */}
         <div>
-          <label htmlFor="medium_coins" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="medium_coins" className="block text-sm font-medium text-[#bbc9cf]">
             Medium Quest Coins
           </label>
           <input
@@ -221,16 +220,15 @@ export function CoinConfigPanel() {
             max={10000}
             value={formValues.medium_coins}
             onChange={(e) => handleChange('medium_coins', e.target.value)}
-            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-              fieldErrors.medium_coins
-                ? 'border-red-300 focus:ring-red-500'
-                : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${fieldErrors.medium_coins
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-[#3c494e]'
+              }`}
             aria-invalid={!!fieldErrors.medium_coins}
             aria-describedby={fieldErrors.medium_coins ? 'medium_coins-error' : undefined}
           />
           {fieldErrors.medium_coins && (
-            <p id="medium_coins-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="medium_coins-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.medium_coins}
             </p>
           )}
@@ -238,7 +236,7 @@ export function CoinConfigPanel() {
 
         {/* Hard Coins */}
         <div>
-          <label htmlFor="hard_coins" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="hard_coins" className="block text-sm font-medium text-[#bbc9cf]">
             Hard Quest Coins
           </label>
           <input
@@ -248,16 +246,15 @@ export function CoinConfigPanel() {
             max={10000}
             value={formValues.hard_coins}
             onChange={(e) => handleChange('hard_coins', e.target.value)}
-            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-              fieldErrors.hard_coins
-                ? 'border-red-300 focus:ring-red-500'
-                : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${fieldErrors.hard_coins
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-[#3c494e]'
+              }`}
             aria-invalid={!!fieldErrors.hard_coins}
             aria-describedby={fieldErrors.hard_coins ? 'hard_coins-error' : undefined}
           />
           {fieldErrors.hard_coins && (
-            <p id="hard_coins-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="hard_coins-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.hard_coins}
             </p>
           )}
@@ -267,7 +264,7 @@ export function CoinConfigPanel() {
         <button
           type="submit"
           disabled={isSaving}
-          className="w-full rounded-lg bg-madrid-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-[#00d4ff] px-4 py-2.5 text-sm font-medium text-[#003642] hover:bg-[#3cd7ff] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? 'Saving...' : 'Save Configuration'}
         </button>

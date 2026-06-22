@@ -54,18 +54,13 @@
   .scanline::after {
     content: '';
     position: absolute;
-    top: 0;
     left: 0;
     right: 0;
-    bottom: 0;
+    height: 2px;
+    top: 0;
     pointer-events: none;
-    background: linear-gradient(to bottom,
-        transparent 0%,
-        transparent 48%,
-        rgba(0, 212, 255, 0.03) 50%,
-        transparent 52%,
-        transparent 100%);
-    animation: scanline 8s linear infinite;
+    background: linear-gradient(to right, transparent, rgba(0, 212, 255, 0.4), transparent);
+    animation: scanmove 4s linear infinite;
   }
 
   /* Terminal cursor blink */
@@ -176,11 +171,31 @@
 }
 
 @keyframes scan {
-  0% { top: 0; }
-  100% { top: 100%; }
+  0% {
+    top: 0;
+  }
+
+  100% {
+    top: 100%;
+  }
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scanmove {
+  0% {
+    top: 0%;
+  }
+
+  100% {
+    top: 100%;
+  }
 }

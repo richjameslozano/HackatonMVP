@@ -383,6 +383,45 @@ export async function createAdminTask(
 }
 
 /**
+ * Creates a task delegated by the Scrum Master to a specific developer.
+ * Created as 'active' since SM directly assigns it (no approval flow).
+ */
+export async function delegateTask(
+  title: string,
+  description: string,
+  assigneeId: string,
+  difficulty: Difficulty,
+  projectIds: string[]
+): Promise<Quest> {
+  const titleValidation = validateTaskTitle(title);
+  if (!titleValidation.valid) {
+    throw new Error(titleValidation.error ?? 'Invalid title');
+  }
+
+  const descValidation = validateTaskDescription(description);
+  if (!descValidation.valid) {
+    throw new Error(descValidation.error ?? 'Invalid description');
+  }
+
+  const fields: Record<string, unknown> = {
+    title: title.trim(),
+    description: description.trim(),
+    category: 'sprint',
+    target_role: 'developer',
+    status: 'active',
+    assignment_type: 'assigned',
+    assignee_id: assigneeId,
+    completion_mode: 'multiple',
+    difficulty,
+    project_ids: serializeProjectIds(projectIds),
+    created_at: Date.now(),
+  };
+
+  const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
+  return mapRecordToQuest(record);
+}
+
+/**
  * Approves a pending task, updating its status from 'pending' to 'active'.
  */
 export async function approveTask(questId: string, _scrumMasterId: string): Promise<Quest> {

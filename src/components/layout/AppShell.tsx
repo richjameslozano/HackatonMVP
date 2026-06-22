@@ -35,7 +35,7 @@ export function AppShell() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto animate-fade-slide-up max-w-full">
+          <div className={`mx-auto max-w-full ${showRightPanel ? '' : 'animate-fade-slide-up'}`}>
             <Outlet />
           </div>
         </main>

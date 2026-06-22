@@ -142,32 +142,32 @@ export function AdminTaskForm() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <h2 className="text-lg font-semibold text-surface-900">Create Task</h2>
-      <p className="mt-1 text-sm text-surface-500">
+      <h2 className="text-lg font-semibold text-[#e5e1e4]">Create Task</h2>
+      <p className="mt-1 text-sm text-[#859398]">
         Create a new task and assign it to one or more projects.
       </p>
 
       {/* Success Toast */}
       {successMessage && (
         <div
-          className="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-green-800 bg-green-900/30 px-4 py-3"
           role="status"
           aria-live="polite"
         >
-          <svg className="h-5 w-5 shrink-0 text-green-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg className="h-5 w-5 shrink-0 text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm font-medium text-green-700">{successMessage}</p>
+          <p className="text-sm font-medium text-green-400">{successMessage}</p>
         </div>
       )}
 
       {/* Error Banner */}
       {errorMessage && (
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
-          <svg className="h-5 w-5 shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-800 bg-red-900/30 px-4 py-3" role="alert">
+          <svg className="h-5 w-5 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-red-700">{errorMessage}</p>
+          <p className="text-sm text-red-400">{errorMessage}</p>
         </div>
       )}
 
@@ -175,7 +175,7 @@ export function AdminTaskForm() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         {/* Title */}
         <div>
-          <label htmlFor="task-title" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="task-title" className="block text-sm font-medium text-[#bbc9cf]">
             Title
           </label>
           <input
@@ -187,14 +187,13 @@ export function AdminTaskForm() {
               setForm((prev) => ({ ...prev, title: e.target.value }));
               if (fieldErrors.title) setFieldErrors((prev) => ({ ...prev, title: undefined }));
             }}
-            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-              fieldErrors.title ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${fieldErrors.title ? 'border-red-500 focus:ring-red-500' : 'border-[#3c494e]'
+              }`}
             aria-invalid={!!fieldErrors.title}
             aria-describedby={fieldErrors.title ? 'task-title-error' : undefined}
           />
           {fieldErrors.title && (
-            <p id="task-title-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="task-title-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.title}
             </p>
           )}
@@ -202,7 +201,7 @@ export function AdminTaskForm() {
 
         {/* Description */}
         <div>
-          <label htmlFor="task-description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="task-description" className="block text-sm font-medium text-[#bbc9cf]">
             Description
           </label>
           <textarea
@@ -214,14 +213,13 @@ export function AdminTaskForm() {
               setForm((prev) => ({ ...prev, description: e.target.value }));
               if (fieldErrors.description) setFieldErrors((prev) => ({ ...prev, description: undefined }));
             }}
-            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-              fieldErrors.description ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${fieldErrors.description ? 'border-red-500 focus:ring-red-500' : 'border-[#3c494e]'
+              }`}
             aria-invalid={!!fieldErrors.description}
             aria-describedby={fieldErrors.description ? 'task-description-error' : undefined}
           />
           {fieldErrors.description && (
-            <p id="task-description-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="task-description-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.description}
             </p>
           )}
@@ -237,27 +235,27 @@ export function AdminTaskForm() {
 
         {/* Target Role */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Target Role</label>
+          <label className="block text-sm font-medium text-[#bbc9cf] mb-2">Target Role</label>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-[#e5e1e4]">
               <input
                 type="radio"
                 name="targetRole"
                 value="developer"
                 checked={form.targetRole === 'developer'}
                 onChange={() => setForm((prev) => ({ ...prev, targetRole: 'developer' }))}
-                className="text-madrid-600 focus:ring-madrid-500"
+                className="text-[#00d4ff] focus:ring-[#00d4ff]"
               />
               Developer
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-[#e5e1e4]">
               <input
                 type="radio"
                 name="targetRole"
                 value="agent"
                 checked={form.targetRole === 'agent'}
                 onChange={() => setForm((prev) => ({ ...prev, targetRole: 'agent' }))}
-                className="text-madrid-600 focus:ring-madrid-500"
+                className="text-[#00d4ff] focus:ring-[#00d4ff]"
               />
               Agent
             </label>
@@ -266,36 +264,36 @@ export function AdminTaskForm() {
 
         {/* Project Assignment */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Project Assignment</label>
+          <label className="block text-sm font-medium text-[#bbc9cf] mb-2">Project Assignment</label>
 
           {isLoadingProjects ? (
             <LoadingIndicator message="Loading projects..." />
           ) : (
             <div className="space-y-2">
               {/* All Projects Toggle */}
-              <label className="flex items-center gap-2 text-sm font-medium text-madrid-700">
+              <label className="flex items-center gap-2 text-sm font-medium text-[#3cd7ff]">
                 <input
                   type="checkbox"
                   checked={form.allProjects}
                   onChange={handleAllProjectsToggle}
-                  className="rounded text-madrid-600 focus:ring-madrid-500"
+                  className="rounded text-[#00d4ff] focus:ring-[#00d4ff]"
                 />
                 All Projects
               </label>
 
               {/* Individual Project Checkboxes */}
               {!form.allProjects && (
-                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-gray-200 p-3">
+                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-[#3c494e] bg-[#201f21] p-3">
                   {projects.length === 0 ? (
-                    <p className="text-sm text-surface-500">No projects available.</p>
+                    <p className="text-sm text-[#859398]">No projects available.</p>
                   ) : (
                     projects.map((project) => (
-                      <label key={project.projectId} className="flex items-center gap-2 text-sm">
+                      <label key={project.projectId} className="flex items-center gap-2 text-sm text-[#e5e1e4]">
                         <input
                           type="checkbox"
                           checked={form.selectedProjectIds.includes(project.projectId)}
                           onChange={() => handleProjectToggle(project.projectId)}
-                          className="rounded text-madrid-600 focus:ring-madrid-500"
+                          className="rounded text-[#00d4ff] focus:ring-[#00d4ff]"
                         />
                         {project.name}
                       </label>
@@ -305,7 +303,7 @@ export function AdminTaskForm() {
               )}
 
               {fieldErrors.projects && (
-                <p className="mt-1 text-xs text-red-600" role="alert">
+                <p className="mt-1 text-xs text-red-400" role="alert">
                   {fieldErrors.projects}
                 </p>
               )}
@@ -317,7 +315,7 @@ export function AdminTaskForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-madrid-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-[#00d4ff] px-4 py-2.5 text-sm font-medium text-[#003642] hover:bg-[#3cd7ff] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? 'Creating...' : 'Create Task'}
         </button>

@@ -9,11 +9,11 @@ import { RewardAdminPanel } from '../components/admin/RewardAdminPanel';
 
 type Tab = 'projects' | 'create-task' | 'coin-settings' | 'rewards';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'projects', label: 'Projects' },
-  { id: 'create-task', label: 'Create Task' },
-  { id: 'coin-settings', label: 'Coin Settings' },
-  { id: 'rewards', label: 'Rewards' },
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'projects', label: 'Projects', icon: 'folder_open' },
+  { id: 'create-task', label: 'Create Task', icon: 'add_task' },
+  { id: 'coin-settings', label: 'Coin Settings', icon: 'monetization_on' },
+  { id: 'rewards', label: 'Rewards', icon: 'redeem' },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -52,7 +52,6 @@ export function AdminPage() {
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
-    // Reset project selection when switching tabs
     if (tab !== 'projects') {
       setSelectedProjectId(null);
     }
@@ -64,30 +63,32 @@ export function AdminPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
+        <p className="label-mono text-[#859398] tracking-widest">
           MADRID_HQ // ADMIN
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-surface-900">Admin View</h1>
-        <p className="mt-1 text-sm text-surface-500">
+        <h1 className="mt-1 text-[48px] font-bold text-gradient leading-tight font-headline">
+          Admin Panel
+        </h1>
+        <p className="mt-1 text-sm text-[#bbc9cf] font-mono">
           Manage projects, create tasks, and configure coin rewards.
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-surface-200">
-        <nav className="-mb-px flex gap-6" aria-label="Admin tabs">
+      <div className="border-b border-[#3c494e]">
+        <nav className="-mb-px flex gap-1" aria-label="Admin tabs">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => handleTabChange(tab.id)}
-              className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'border-madrid-600 text-madrid-600'
-                  : 'border-transparent text-surface-500 hover:border-surface-300 hover:text-surface-700'
-              }`}
+              className={`inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-mono uppercase tracking-wider transition-colors ${activeTab === tab.id
+                  ? 'border-[#00d4ff] text-[#00d4ff]'
+                  : 'border-transparent text-[#859398] hover:border-[#3c494e] hover:text-[#bbc9cf]'
+                }`}
               aria-current={activeTab === tab.id ? 'page' : undefined}
             >
+              <span className="material-symbols-outlined text-lg">{tab.icon}</span>
               {tab.label}
             </button>
           ))}

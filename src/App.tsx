@@ -10,7 +10,7 @@ import { AdminGuard } from './components/auth/AdminGuard';
 import { QuestBoardPage } from './pages/QuestBoardPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { BadgeCollectionPage } from './pages/BadgeCollectionPage';
-import { CommandCenterPage } from './pages/CommandCenterPage';
+import { ScrumMasterPage } from './pages/ScrumMasterPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -62,7 +62,7 @@ function App() {
           <Route path="/quests" element={<QuestBoardPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/badges" element={<BadgeCollectionPage />} />
-          <Route path="/command-center" element={<CommandCenterPage />} />
+          <Route path="/command-center" element={<ScrumMasterPage />} />
           <Route path="/store" element={<StorePage />} />
           <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
           <Route path="/" element={<Navigate to="/quests" replace />} />
