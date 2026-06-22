@@ -51,7 +51,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center gap-1 text-sm text-surface-500 hover:text-madrid-600 transition-colors"
+        className="flex items-center gap-1 text-sm text-[#859398] hover:text-[#3cd7ff] transition-colors"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -62,16 +62,16 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       {/* Project Header */}
       {project && (
         <div>
-          <h2 className="text-lg font-semibold text-surface-900">{project.name}</h2>
+          <h2 className="text-lg font-semibold text-[#e5e1e4]">{project.name}</h2>
           {project.description && (
-            <p className="mt-1 text-sm text-surface-500">{project.description}</p>
+            <p className="mt-1 text-sm text-[#859398]">{project.description}</p>
           )}
         </div>
       )}
 
       {/* Quest List Placeholder — full implementation in task 7.4 */}
-      <div className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center">
-        <p className="text-sm text-surface-500">Quest list for this project will be displayed here.</p>
+      <div className="rounded-xl border border-[#3c494e] bg-[#201f21] px-4 py-8 text-center">
+        <p className="text-sm text-[#859398]">Quest list for this project will be displayed here.</p>
       </div>
     </div>
   );

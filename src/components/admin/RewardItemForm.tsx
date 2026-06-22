@@ -136,19 +136,18 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
   function inputClass(field: string): string {
     const hasError = touched.has(field) && fieldErrors[field as keyof FieldErrors];
-    return `mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-madrid-500 ${
-      hasError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-    }`;
+    return `mt-1 block w-full rounded-lg border px-3 py-2 text-sm text-[#e5e1e4] placeholder-[#859398] bg-[#201f21] focus:outline-none focus:ring-2 focus:border-[#00d4ff] focus:ring-[#00d4ff] ${hasError ? 'border-red-500 focus:ring-red-500' : 'border-[#3c494e]'
+      }`;
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="mx-auto max-w-lg">
-      <h2 className="text-lg font-semibold text-surface-900">
+      <h2 className="text-lg font-semibold text-[#e5e1e4]">
         {mode === 'create' ? 'Create Reward Item' : 'Edit Reward Item'}
       </h2>
-      <p className="mt-1 text-sm text-surface-500">
+      <p className="mt-1 text-sm text-[#859398]">
         {mode === 'create'
           ? 'Add a new item to the reward store catalog.'
           : 'Update the reward item details.'}
@@ -156,11 +155,11 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
       {/* API Error Banner */}
       {error && (
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
-          <svg className="h-5 w-5 shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-800 bg-red-900/30 px-4 py-3" role="alert">
+          <svg className="h-5 w-5 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
           </svg>
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
@@ -168,8 +167,8 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         {/* Title */}
         <div>
-          <label htmlFor="reward-title" className="block text-sm font-medium text-gray-700">
-            Title <span className="text-red-500">*</span>
+          <label htmlFor="reward-title" className="block text-sm font-medium text-[#bbc9cf]">
+            Title <span className="text-red-400">*</span>
           </label>
           <input
             id="reward-title"
@@ -186,7 +185,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             aria-describedby={fieldErrors.title ? 'reward-title-error' : undefined}
           />
           {touched.has('title') && fieldErrors.title && (
-            <p id="reward-title-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="reward-title-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.title}
             </p>
           )}
@@ -194,7 +193,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
         {/* Description */}
         <div>
-          <label htmlFor="reward-description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="reward-description" className="block text-sm font-medium text-[#bbc9cf]">
             Description
           </label>
           <textarea
@@ -212,7 +211,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             aria-describedby={fieldErrors.description ? 'reward-description-error' : undefined}
           />
           {touched.has('description') && fieldErrors.description && (
-            <p id="reward-description-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="reward-description-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.description}
             </p>
           )}
@@ -220,8 +219,8 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
         {/* Cost */}
         <div>
-          <label htmlFor="reward-cost" className="block text-sm font-medium text-gray-700">
-            Cost (coins) <span className="text-red-500">*</span>
+          <label htmlFor="reward-cost" className="block text-sm font-medium text-[#bbc9cf]">
+            Cost (coins) <span className="text-red-400">*</span>
           </label>
           <input
             id="reward-cost"
@@ -239,7 +238,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             aria-describedby={fieldErrors.cost ? 'reward-cost-error' : undefined}
           />
           {touched.has('cost') && fieldErrors.cost && (
-            <p id="reward-cost-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="reward-cost-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.cost}
             </p>
           )}
@@ -247,8 +246,8 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
         {/* Image URL */}
         <div>
-          <label htmlFor="reward-image-url" className="block text-sm font-medium text-gray-700">
-            Image URL <span className="text-sm text-surface-400">(optional)</span>
+          <label htmlFor="reward-image-url" className="block text-sm font-medium text-[#bbc9cf]">
+            Image URL <span className="text-sm text-[#859398]">(optional)</span>
           </label>
           <input
             id="reward-image-url"
@@ -265,7 +264,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             aria-describedby={fieldErrors.imageUrl ? 'reward-image-url-error' : undefined}
           />
           {touched.has('imageUrl') && fieldErrors.imageUrl && (
-            <p id="reward-image-url-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="reward-image-url-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.imageUrl}
             </p>
           )}
@@ -273,12 +272,12 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
 
         {/* Stock Quantity */}
         <div>
-          <label htmlFor="reward-stock" className="block text-sm font-medium text-gray-700">
-            Stock Quantity <span className="text-red-500">*</span>
+          <label htmlFor="reward-stock" className="block text-sm font-medium text-[#bbc9cf]">
+            Stock Quantity <span className="text-red-400">*</span>
           </label>
 
           {/* Unlimited checkbox */}
-          <label className="mt-2 flex items-center gap-2 text-sm">
+          <label className="mt-2 flex items-center gap-2 text-sm text-[#e5e1e4]">
             <input
               type="checkbox"
               checked={unlimited}
@@ -289,7 +288,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
                   setFieldErrors((prev) => ({ ...prev, stockQuantity: undefined }));
                 }
               }}
-              className="rounded text-madrid-600 focus:ring-madrid-500"
+              className="rounded text-[#00d4ff] focus:ring-[#00d4ff]"
             />
             Unlimited stock
           </label>
@@ -311,7 +310,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             />
           )}
           {touched.has('stockQuantity') && fieldErrors.stockQuantity && !unlimited && (
-            <p id="reward-stock-error" className="mt-1 text-xs text-red-600" role="alert">
+            <p id="reward-stock-error" className="mt-1 text-xs text-red-400" role="alert">
               {fieldErrors.stockQuantity}
             </p>
           )}
@@ -322,7 +321,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 rounded-lg bg-madrid-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-lg bg-[#00d4ff] px-4 py-2.5 text-sm font-medium text-[#003642] hover:bg-[#3cd7ff] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading
               ? mode === 'create' ? 'Creating...' : 'Saving...'
@@ -332,7 +331,7 @@ export function RewardItemForm({ initialValues, onSubmit, onCancel, isLoading, e
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-lg border border-[#3c494e] bg-[#2a2a2c] px-4 py-2.5 text-sm font-medium text-[#bbc9cf] hover:bg-[#353437] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>

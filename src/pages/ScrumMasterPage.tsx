@@ -29,7 +29,7 @@ import { listProjects } from '../services/project.service';
 import { validateTaskTitle, validateTaskDescription } from '../utils/validation';
 import type { Difficulty, Project } from '../types';
 
-export function CommandCenterPage() {
+export function ScrumMasterPage() {
     const currentMember = useAppStore((s) => s.currentMember);
     const isScrumMaster = useAppStore((s) => s.isScrumMaster);
     const approveTask = useAppStore((s) => s.approveTask);

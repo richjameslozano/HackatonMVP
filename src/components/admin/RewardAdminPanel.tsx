@@ -141,19 +141,19 @@ export function RewardAdminPanel() {
   if (itemsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-madrid-200 border-t-madrid-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#00d4ff]/20 border-t-[#00d4ff]" />
       </div>
     );
   }
 
   if (itemsError) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
-        <p className="text-sm text-red-700">{itemsError}</p>
+      <div className="rounded-xl border border-red-800 bg-red-900/30 px-4 py-3" role="alert">
+        <p className="text-sm text-red-400">{itemsError}</p>
         <button
           type="button"
           onClick={() => void fetchAllRewardItems()}
-          className="mt-2 text-sm font-medium text-red-600 hover:text-red-800"
+          className="mt-2 text-sm font-medium text-red-400 hover:text-red-300"
         >
           Retry
         </button>
@@ -165,11 +165,11 @@ export function RewardAdminPanel() {
     <div className="space-y-4">
       {/* Header with Create button */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-surface-900">Reward Items</h2>
+        <h2 className="text-lg font-semibold text-[#e5e1e4]">Reward Items</h2>
         <button
           type="button"
           onClick={handleCreate}
-          className="rounded-lg bg-madrid-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2"
+          className="rounded-lg bg-[#00d4ff] px-4 py-2 text-sm font-medium text-[#003642] hover:bg-[#3cd7ff] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2"
         >
           Create New
         </button>
@@ -177,50 +177,50 @@ export function RewardAdminPanel() {
 
       {/* Items Table */}
       {rewardItems.length === 0 ? (
-        <div className="py-12 text-center text-sm text-surface-500">
+        <div className="py-12 text-center text-sm text-[#859398]">
           No reward items yet. Create one to get started.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-surface-200">
-          <table className="min-w-full divide-y divide-surface-200">
-            <thead className="bg-surface-50">
+        <div className="overflow-hidden rounded-xl border border-[#3c494e]">
+          <table className="min-w-full divide-y divide-[#3c494e]/50">
+            <thead className="bg-[#1c1b1d]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#859398]">
                   Title
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#859398]">
                   Cost
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#859398]">
                   Stock
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-surface-500">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#859398]">
                   Status
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-surface-500">
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-[#859398]">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-200 bg-white">
+            <tbody className="divide-y divide-[#3c494e]/50 bg-[#201f21]">
               {rewardItems.map((item) => (
-                <tr key={item.itemId}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-surface-900">
+                <tr key={item.itemId} className="hover:bg-[#2a2a2c]">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-[#e5e1e4]">
                     {item.title}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-surface-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-[#bbc9cf]">
                     {item.cost} coins
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-surface-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-[#bbc9cf]">
                     {item.stockQuantity === -1 ? 'Unlimited' : item.stockQuantity}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm">
                     {item.isActive ? (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      <span className="inline-flex items-center rounded-full bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-400">
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      <span className="inline-flex items-center rounded-full bg-[#2a2a2c] px-2.5 py-0.5 text-xs font-medium text-[#859398]">
                         Inactive
                       </span>
                     )}
@@ -229,7 +229,7 @@ export function RewardAdminPanel() {
                     <button
                       type="button"
                       onClick={() => handleEdit(item)}
-                      className="mr-2 font-medium text-madrid-600 hover:text-madrid-800"
+                      className="mr-2 font-medium text-[#3cd7ff] hover:text-[#00d4ff]"
                     >
                       Edit
                     </button>
@@ -237,7 +237,7 @@ export function RewardAdminPanel() {
                       <button
                         type="button"
                         onClick={() => void handleDeactivate(item.itemId)}
-                        className="font-medium text-red-600 hover:text-red-800"
+                        className="font-medium text-red-400 hover:text-red-300"
                       >
                         Deactivate
                       </button>

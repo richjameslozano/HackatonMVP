@@ -64,16 +64,15 @@ export function DifficultySelector({ value, onChange }: DifficultySelectorProps)
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium text-gray-700">Difficulty</legend>
+      <legend className="text-sm font-medium text-[#bbc9cf]">Difficulty</legend>
       <div className="flex flex-col gap-2">
         {DIFFICULTY_OPTIONS.map((option) => (
           <label
             key={option.value}
-            className={`flex items-center gap-3 rounded-lg border px-4 py-2 cursor-pointer transition-colors ${
-              value === option.value
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
+            className={`flex items-center gap-3 rounded-lg border px-4 py-2 cursor-pointer transition-colors ${value === option.value
+                ? 'border-[#00d4ff] bg-[rgba(0,212,255,0.05)] shadow-[0_0_8px_rgba(0,212,255,0.15)]'
+                : 'border-[#3c494e] hover:border-[#859398] bg-[#201f21]'
+              }`}
           >
             <input
               type="radio"
@@ -81,12 +80,12 @@ export function DifficultySelector({ value, onChange }: DifficultySelectorProps)
               value={option.value}
               checked={value === option.value}
               onChange={() => onChange(option.value)}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+              className="h-4 w-4 text-[#00d4ff] focus:ring-[#00d4ff]"
             />
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-[#e5e1e4]">
               {option.label}
             </span>
-            <span className="ml-auto text-sm text-gray-500">
+            <span className="ml-auto text-sm text-[#3cd7ff]">
               🪙 {getCoinsForDifficulty(option.value)} coins
             </span>
           </label>
