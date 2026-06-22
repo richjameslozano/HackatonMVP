@@ -10,9 +10,15 @@ from app.models import EventMessage, EventType
 
 # Maps Lark Base table_id → logical table name
 TABLE_ID_MAP: dict[str, str] = {
-    "tblC8k1INWUFfXYm": "quest_completions",
-    "tblzEYdc7tHCTmNE": "quests",
-    "tblnVFbK2EzKTsV6": "badge_earned",
+    "tblLGu2kUdrvsE4A": "quest_completions",
+    "tblpAwQiuFod3Lls": "quests",
+    "tblxLZpbqSdEVeae": "badge_earned",
+    "tblhp4slmpRxNyVk": "members",
+    "tblRqhbn5rj0oAOG": "badges",
+    "tblIlRVhCilqxALl": "coin_config",
+    "tblLaLZgqcV9vCcP": "projects",
+    "tblZ1vZb7Q2wA16J": "reward_items",
+    "tblD2v2VjST80GUt": "purchases",
 }
 
 # Maps logical table name → EventMessage type
@@ -20,6 +26,12 @@ TABLE_EVENT_MAP: dict[str, EventType] = {
     "quest_completions": "leaderboard_update",
     "quests": "quest_update",
     "badge_earned": "badge_update",
+    "members": "cache_updated",
+    "badges": "badge_update",
+    "coin_config": "cache_updated",
+    "projects": "cache_updated",
+    "reward_items": "cache_updated",
+    "purchases": "cache_updated",
 }
 
 

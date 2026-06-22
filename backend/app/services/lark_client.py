@@ -86,8 +86,11 @@ class LarkClient:
             resp.raise_for_status()
 
         resp.raise_for_status()
-        data = resp.json()
-        return data.get("data", {}).get("record")
+        response_json = resp.json()
+        data = response_json.get("data") if response_json else None
+        if data is None:
+            return None
+        return data.get("record")
 
     async def list_records(
         self,
@@ -121,9 +124,14 @@ class LarkClient:
                 resp.raise_for_status()
 
             resp.raise_for_status()
-            data = resp.json().get("data", {})
+            response_json = resp.json()
+            data = response_json.get("data") if response_json else None
 
-            items = data.get("items", [])
+            if data is None:
+                # Empty table or no data field — return what we have so far
+                break
+
+            items = data.get("items") or []
             all_records.extend(items)
 
             if not data.get("has_more", False):
@@ -185,3 +193,40 @@ class LarkClient:
     async def close(self) -> None:
         """Close the underlying HTTP client."""
         await self._client.aclose()
+
+    # ─── Event Subscription ─────────────────────────────────────────────────
+
+    async def subscribe_to_doc_events(self, file_token: str) -> bool:
+        """Subscribe to document events for a Bitable app.
+
+        Calls POST /drive/v1/files/{file_token}/subscribe?file_type=bitable
+        so that Lark sends record change events to our webhook endpoint.
+
+        Returns True on success, False on failure (logged but not raised).
+        """
+        url = (
+            f"{self._base_url}/drive/v1/files/{file_token}"
+            f"/subscribe?file_type=bitable"
+        )
+        headers = await self._headers()
+
+        try:
+            resp = await self._client.post(url, headers=headers, timeout=10.0)
+            data = resp.json()
+            code = data.get("code", -1)
+            if code == 0:
+                return True
+            else:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "subscribe_to_doc_events failed: code=%s msg=%s",
+                    code,
+                    data.get("msg", "unknown"),
+                )
+                return False
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(
+                "subscribe_to_doc_events exception: %s", exc
+            )
+            return False

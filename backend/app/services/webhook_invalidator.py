@@ -76,8 +76,13 @@ class WebhookInvalidator:
     async def _handle_record_changed(
         self, table_id: str, record_id: str
     ) -> None:
-        """Remove changed record from cache so next read triggers fresh fetch."""
+        """Remove changed record from cache so next read triggers fresh fetch.
+        
+        Also resets the fully_cached flag so list/search requests re-fetch
+        the full table from Lark.
+        """
         self._cache.remove(table_id, record_id)
+        self._cache.invalidate_table_full_cache(table_id)
         logger.info(
             "Cache invalidated for changed record %s in table %s",
             record_id,
@@ -127,8 +132,13 @@ class WebhookInvalidator:
     async def _handle_record_deleted(
         self, table_id: str, record_id: str
     ) -> None:
-        """Remove deleted record from cache."""
+        """Remove deleted record from cache and invalidate full-cache flag.
+        
+        Resetting fully_cached ensures the next list/search request re-fetches
+        from Lark, so deleted records don't keep appearing.
+        """
         self._cache.remove(table_id, record_id)
+        self._cache.invalidate_table_full_cache(table_id)
         self._cache.clear_pending_fetch(table_id, record_id)
         self._cancel_pending_retry(record_id)
         logger.info(

@@ -60,6 +60,9 @@ async def receive_webhook(request: Request) -> dict:
         raise HTTPException(
             status_code=403, detail="Invalid verification token")
 
+    # DEBUG: Log the full event payload to understand Lark's format
+    logger.info("Webhook event received: %s", body.model_dump_json())
+
     # Step 5: Extract table_id and resolve to logical table name
     table_id = body.event.get("table_id", "")
     table_name = TABLE_ID_MAP.get(table_id)

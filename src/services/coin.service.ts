@@ -1,7 +1,7 @@
-import type { Difficulty, CoinConfig, LarkFilter } from '../types';
+import type { Difficulty, CoinConfig } from '../types';
 import { listRecords, getRecord, createRecord, updateRecord, extractNumberValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
-import { withRetry } from './auth.service';
+import { awardCoins } from './store.service';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -16,19 +16,16 @@ const DEFAULT_COIN_VALUES: CoinConfig = {
 /**
  * Fetches the Coin_Config record from Lark Base.
  * Returns defaults (1, 3, 5) if no record exists or on error.
- * Uses withRetry (3 attempts) before falling back to defaults.
  */
 export async function getCoinConfig(): Promise<CoinConfig> {
   try {
-    const records = await withRetry(async () => {
-      return listRecords(TABLE_IDS.coinConfig);
-    });
+    const records = await listRecords(TABLE_IDS.coinConfig);
 
     if (!records || records.length === 0) {
       return { ...DEFAULT_COIN_VALUES };
     }
 
-    const record = records[0];
+    const record = records[0]!;
     const fields = record.fields;
 
     const easyCoinVal = extractNumberValue(fields['easy_coins']);
@@ -60,7 +57,7 @@ export async function updateCoinConfig(config: CoinConfig): Promise<CoinConfig> 
   };
 
   if (records && records.length > 0) {
-    const existingRecordId = records[0].record_id;
+    const existingRecordId = records[0]!.record_id;
     await updateRecord(TABLE_IDS.coinConfig, existingRecordId, fields);
   } else {
     await createRecord(TABLE_IDS.coinConfig, fields);
@@ -95,44 +92,26 @@ export async function calculateCoinsForDifficulty(difficulty: Difficulty | null 
 // ─── Coin Balance ───────────────────────────────────────────────────────────
 
 /**
- * Computes a member's total coin balance by summing coins_awarded
- * across all their Quest_Completions records.
- * Returns 0 if no completions exist. Result is always >= 0.
+ * Gets a member's coin balance from their `coins` field on the Members table.
+ * This is the single source of truth for balance.
  */
 export async function getCoinBalance(memberId: string): Promise<number> {
-  const filter: LarkFilter = {
-    conjunction: 'and',
-    conditions: [
-      {
-        field_name: 'member_id',
-        operator: 'is',
-        value: [memberId],
-      },
-    ],
-  };
-
-  const records = await listRecords(TABLE_IDS.questCompletions, filter);
-
-  if (!records || records.length === 0) {
-    return 0;
-  }
-
-  const total = records.reduce((sum, record) => {
-    const coins = extractNumberValue(record.fields['coins_awarded']);
-    return sum + coins;
-  }, 0);
-
-  return Math.max(total, 0);
+  const memberRecord = await getRecord(TABLE_IDS.members, memberId);
+  return extractNumberValue(memberRecord.fields['coins']);
 }
 
 // ─── Coin Award ─────────────────────────────────────────────────────────────
 
 /**
  * Awards coins for a quest completion.
- * Reads the quest's difficulty, calculates the coin amount, and returns it.
- * Does NOT create the completion record — that is handled by quest.service.
+ * Reads the quest's difficulty, calculates the coin amount, increments the
+ * member's `coins` field on the Members table, and returns the amount awarded.
  */
-export async function awardCoinsForCompletion(questId: string, difficulty: Difficulty | null): Promise<number> {
+export async function awardCoinsForCompletion(
+  questId: string,
+  difficulty: Difficulty | null,
+  memberId?: string
+): Promise<number> {
   // If difficulty is not provided directly, fetch it from the quest record
   let effectiveDifficulty = difficulty;
 
@@ -151,5 +130,12 @@ export async function awardCoinsForCompletion(questId: string, difficulty: Diffi
     }
   }
 
-  return calculateCoinsForDifficulty(effectiveDifficulty);
+  const coinAmount = await calculateCoinsForDifficulty(effectiveDifficulty);
+
+  // If memberId is provided, credit coins to the member's record
+  if (memberId) {
+    await awardCoins(memberId, coinAmount);
+  }
+
+  return coinAmount;
 }

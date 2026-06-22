@@ -302,9 +302,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { currentMember } = get();
     if (!currentMember) return;
 
+    // Developers must have an assigned project to propose tasks
+    if (!currentMember.projectId) {
+      throw new Error('No project assigned. Ask an admin to assign you to a project first.');
+    }
+
     let quest;
     try {
-      quest = await proposeTask(title, description, currentMember.memberId, difficulty);
+      quest = await proposeTask(title, description, currentMember.memberId, difficulty, [currentMember.projectId]);
     } catch (err) {
       console.error('[proposeTask] Failed:', err);
       throw err;

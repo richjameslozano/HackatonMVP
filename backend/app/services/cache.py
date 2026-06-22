@@ -121,6 +121,12 @@ class CacheStore:
         table.fully_cached = True
         table.last_full_fetch_at = time.time()
 
+    def invalidate_table_full_cache(self, table_id: str) -> None:
+        """Reset the fully_cached flag so the next search re-fetches from Lark."""
+        table = self._tables.get(table_id)
+        if table is not None:
+            table.fully_cached = False
+
     def has_pending_fetch(self, record_id: str) -> bool:
         """Check if a record has a pending fetch across all tables."""
         for table in self._tables.values():

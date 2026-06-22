@@ -300,7 +300,8 @@ export async function proposeTask(
   title: string,
   description: string,
   developerId: string,
-  difficulty?: Difficulty
+  difficulty?: Difficulty,
+  projectIds?: string[]
 ): Promise<Quest> {
   const titleValidation = validateTaskTitle(title);
   if (!titleValidation.valid) {
@@ -328,6 +329,11 @@ export async function proposeTask(
   // Persist difficulty if provided
   if (difficulty) {
     fields.difficulty = difficulty;
+  }
+
+  // Persist project association if provided
+  if (projectIds && projectIds.length > 0) {
+    fields.project_ids = serializeProjectIds(projectIds);
   }
 
   const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
@@ -527,8 +533,8 @@ export async function completeQuest(
     }
   }
 
-  // Calculate coin reward based on quest difficulty
-  const coinAmount = await awardCoinsForCompletion(questId, quest.difficulty);
+  // Calculate coin reward based on quest difficulty and credit to member
+  const coinAmount = await awardCoinsForCompletion(questId, quest.difficulty, memberId);
 
   // Write the Quest_Completion record with coins_awarded
   const completionFields: Record<string, unknown> = {

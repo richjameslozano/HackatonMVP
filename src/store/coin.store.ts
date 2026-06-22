@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getSpendableBalance } from '../services/store.service';
+import { getCoinBalance } from '../services/coin.service';
 
 // ─── Store State Interface ──────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ export const useCoinStore = create<CoinState>()((set) => ({
   fetchBalance: async (memberId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const balance = await getSpendableBalance(memberId);
+      const balance = await getCoinBalance(memberId);
       set({
         balance,
         isLoading: false,
@@ -46,7 +46,7 @@ export const useCoinStore = create<CoinState>()((set) => ({
   refreshBalance: async (memberId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const balance = await getSpendableBalance(memberId);
+      const balance = await getCoinBalance(memberId);
       set({
         balance,
         isLoading: false,

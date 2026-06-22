@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { validateTaskTitle, validateTaskDescription } from '../../utils/validation';
 import { ValidationError } from '../shared';
-import type { Difficulty, Project } from '../../types';
-import { listProjects } from '../../services/project.service';
+import type { Difficulty } from '../../types';
+import { useAppStore } from '../../store/app.store';
 
 interface ProposeTaskFormProps {
   onSubmit: (title: string, description: string, difficulty: Difficulty) => Promise<void>;
@@ -16,6 +16,9 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; coins: number; sub
 ];
 
 export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
+  const currentMember = useAppStore((s) => s.currentMember);
+  const hasProject = Boolean(currentMember?.projectId);
+
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -23,18 +26,10 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descTouched, setDescTouched] = useState(false);
-  const [projectId, setProjectId] = useState('');
-  const [projects, setProjects] = useState<Project[]>([]);
 
   const titleValidation = validateTaskTitle(title);
   const descValidation = validateTaskDescription(description);
   const isFormValid = titleValidation.valid && descValidation.valid;
-
-  useEffect(() => {
-    if (showModal) {
-      listProjects().then(setProjects).catch(() => setProjects([]));
-    }
-  }, [showModal]);
 
   function handleOpen() {
     setShowModal(true);
@@ -45,7 +40,6 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     setTitle('');
     setDescription('');
     setDifficulty('easy');
-    setProjectId('');
     setTitleTouched(false);
     setDescTouched(false);
   }
@@ -64,6 +58,21 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // ─── No Project Assigned State ──────────────────────────────────────────
+  if (!hasProject) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-3 px-4 border border-[rgba(60,215,255,0.15)] bg-[rgba(0,212,255,0.03)] rounded">
+        <span className="material-symbols-outlined text-[#bbc9cf] text-2xl">folder_off</span>
+        <p className="font-mono text-[12px] text-[#bbc9cf] text-center uppercase">
+          No project yet
+        </p>
+        <p className="text-xs text-[rgba(187,201,207,0.6)] text-center">
+          Ask an admin to assign you to a project before proposing tasks.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -123,25 +132,6 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Select Project */}
-                <div className="space-y-2">
-                  <label htmlFor="modal-task-project" className="font-mono text-[12px] text-[#3cd7ff] uppercase flex justify-between">
-                    Select Project
-                    <span className="text-[rgba(187,201,207,0.4)]">Required</span>
-                  </label>
-                  <select
-                    id="modal-task-project"
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
-                    className="w-full bg-[#201f21] border-0 border-b border-[#3c494e] focus:border-[#00d4ff] focus:ring-0 text-[#e5e1e4] text-base py-3 px-0 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="">Choose a project...</option>
-                    {projects.map((p) => (
-                      <option key={p.projectId} value={p.projectId}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Title */}
                 <div className="space-y-2 group">
                   <label htmlFor="modal-task-title" className="font-mono text-[12px] text-[#3cd7ff] uppercase flex justify-between">

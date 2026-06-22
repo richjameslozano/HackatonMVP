@@ -11,16 +11,16 @@ class TestTableMappings:
     """Tests for TABLE_ID_MAP and TABLE_EVENT_MAP constants."""
 
     def test_table_id_map_contains_quest_completions(self):
-        assert "tblC8k1INWUFfXYm" in TABLE_ID_MAP
-        assert TABLE_ID_MAP["tblC8k1INWUFfXYm"] == "quest_completions"
+        assert "tblLGu2kUdrvsE4A" in TABLE_ID_MAP
+        assert TABLE_ID_MAP["tblLGu2kUdrvsE4A"] == "quest_completions"
 
     def test_table_id_map_contains_quests(self):
-        assert "tblzEYdc7tHCTmNE" in TABLE_ID_MAP
-        assert TABLE_ID_MAP["tblzEYdc7tHCTmNE"] == "quests"
+        assert "tblpAwQiuFod3Lls" in TABLE_ID_MAP
+        assert TABLE_ID_MAP["tblpAwQiuFod3Lls"] == "quests"
 
     def test_table_id_map_contains_badge_earned(self):
-        assert "tblnVFbK2EzKTsV6" in TABLE_ID_MAP
-        assert TABLE_ID_MAP["tblnVFbK2EzKTsV6"] == "badge_earned"
+        assert "tblxLZpbqSdEVeae" in TABLE_ID_MAP
+        assert TABLE_ID_MAP["tblxLZpbqSdEVeae"] == "badge_earned"
 
     def test_table_event_map_quest_completions(self):
         assert TABLE_EVENT_MAP["quest_completions"] == "leaderboard_update"

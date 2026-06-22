@@ -66,6 +66,14 @@ async def lifespan(app: FastAPI):
     # Start flush scheduler
     await flush_scheduler.start()
 
+    # Subscribe to Lark Base doc events so we receive record change webhooks
+    if settings.lark_base_app_token:
+        subscribed = await lark_client.subscribe_to_doc_events(settings.lark_base_app_token)
+        if subscribed:
+            logger.info("Subscribed to Lark Base doc events for token=%s", settings.lark_base_app_token)
+        else:
+            logger.warning("Failed to subscribe to Lark Base doc events — webhooks may not arrive")
+
     logger.info(
         "Cache TTL=%ds, Flush interval=%ds",
         settings.cache_ttl_seconds,

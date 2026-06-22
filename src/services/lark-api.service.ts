@@ -1,12 +1,12 @@
 import type { LarkFilter, LarkRecord, LarkSort } from '../types';
-import { BACKEND_CONFIG, LARK_CONFIG } from './config';
-import { createTimeoutSignal, getTenantToken } from './auth.service';
+import { BACKEND_CONFIG } from './config';
 import { useAppStore } from '../store/app.store';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const RETRY_DELAY_502_MS = 3_000;
 const RETRY_DELAY_503_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 // ─── Backend Error Handling ─────────────────────────────────────────────────
 
@@ -24,6 +24,18 @@ function isNetworkError(error: unknown): boolean {
  */
 function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Creates an AbortController that auto-aborts after the configured timeout.
+ */
+function createTimeoutSignal(): { signal: AbortSignal; cleanup: () => void } {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    return {
+        signal: controller.signal,
+        cleanup: () => clearTimeout(timer),
+    };
 }
 
 /**
@@ -135,14 +147,28 @@ export function extractNumberValue(value: unknown): number {
 
 // ─── URL Construction ───────────────────────────────────────────────────────
 
-function getBaseTableUrl(tableId: string): string {
-    return `${LARK_CONFIG.baseUrl}/bitable/v1/apps/${LARK_CONFIG.baseAppToken}/tables/${tableId}/records`;
+/**
+ * Builds the backend API URL for a given table.
+ * All requests now route through the backend cache layer.
+ */
+function getBackendTableUrl(tableId: string): string {
+    return `${BACKEND_CONFIG.baseUrl}/api/tables/${tableId}/records`;
+}
+
+/**
+ * Builds authorization headers for backend requests.
+ */
+function getBackendHeaders(): Record<string, string> {
+    return {
+        Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
+        'Content-Type': 'application/json',
+    };
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Lists records from a table using the backend search endpoint.
+ * Lists records from a table via the backend cache layer.
  * Supports optional filter and sort via request body.
  */
 export async function listRecords(
@@ -151,7 +177,7 @@ export async function listRecords(
     sort?: LarkSort[]
 ): Promise<LarkRecord[]> {
     return withBackendRetry(async () => {
-        const url = `${getBaseTableUrl(tableId)}/search`;
+        const url = `${getBackendTableUrl(tableId)}/search`;
 
         const body: Record<string, unknown> = {};
         if (filter) body.filter = filter;
@@ -160,13 +186,9 @@ export async function listRecords(
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
-            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getBackendHeaders(),
                 body: JSON.stringify(body),
                 signal,
             });
@@ -176,16 +198,15 @@ export async function listRecords(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { items?: Array<{ record_id: string; fields: Record<string, unknown> }> };
+                records: Array<{ record_id: string; fields: Record<string, unknown> }>;
+                total: number;
             };
 
-            if (!data.data?.items) {
+            if (!data.records) {
                 return [];
             }
 
-            return data.data.items.map((item) => ({
+            return data.records.map((item) => ({
                 record_id: item.record_id,
                 fields: item.fields,
             }));
@@ -196,25 +217,21 @@ export async function listRecords(
 }
 
 /**
- * Gets a single record by ID from a table via the backend.
+ * Gets a single record by ID from a table via the backend cache layer.
  */
 export async function getRecord(
     tableId: string,
     recordId: string
 ): Promise<LarkRecord> {
     return withBackendRetry(async () => {
-        const url = `${getBaseTableUrl(tableId)}/${recordId}`;
+        const url = `${getBackendTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
-            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getBackendHeaders(),
                 signal,
             });
 
@@ -223,18 +240,13 @@ export async function getRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { record?: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
-            if (!data.data?.record) {
-                throw new Error('getRecord: record not found');
-            }
-
             return {
-                record_id: data.data.record.record_id,
-                fields: data.data.record.fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();
@@ -253,18 +265,15 @@ export async function createRecord(
     options?: { sync?: boolean }
 ): Promise<LarkRecord> {
     return withBackendRetry(async () => {
-        const url = `${getBaseTableUrl(tableId)}`;
+        const syncParam = options?.sync ? '?sync=true' : '';
+        const url = `${getBackendTableUrl(tableId)}${syncParam}`;
 
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
-            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getBackendHeaders(),
                 body: JSON.stringify({ fields }),
                 signal,
             });
@@ -275,14 +284,13 @@ export async function createRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data: { record: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
             return {
-                record_id: data.data.record.record_id,
-                fields: data.data.record.fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();
@@ -292,6 +300,7 @@ export async function createRecord(
 
 /**
  * Updates an existing record in a table via the backend.
+ * The update is queued for batch flush (optimistic response from cache).
  */
 export async function updateRecord(
     tableId: string,
@@ -299,18 +308,14 @@ export async function updateRecord(
     fields: Record<string, unknown>
 ): Promise<LarkRecord> {
     return withBackendRetry(async () => {
-        const url = `${getBaseTableUrl(tableId)}/${recordId}`;
+        const url = `${getBackendTableUrl(tableId)}/${recordId}`;
 
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
-            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: getBackendHeaders(),
                 body: JSON.stringify({ fields }),
                 signal,
             });
@@ -320,21 +325,13 @@ export async function updateRecord(
             }
 
             const data = (await response.json()) as {
-                code: number;
-                msg: string;
-                data?: { record?: { record_id: string; fields: Record<string, unknown> } };
+                record_id: string;
+                fields: Record<string, unknown>;
             };
 
-            if (data.data?.record) {
-                return {
-                    record_id: data.data.record.record_id,
-                    fields: data.data.record.fields,
-                };
-            }
-
             return {
-                record_id: recordId,
-                fields,
+                record_id: data.record_id,
+                fields: data.fields,
             };
         } finally {
             cleanup();

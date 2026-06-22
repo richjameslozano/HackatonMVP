@@ -1,7 +1,6 @@
 import type { RewardItem, PurchaseRecord, LarkFilter } from '../types';
 import { TABLE_IDS } from './config';
 import { listRecords, getRecord, createRecord, updateRecord, extractTextValue, extractNumberValue } from './lark-api.service';
-import { withRetry } from './auth.service';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -18,32 +17,45 @@ function mapRecordToRewardItem(record: { record_id: string; fields: Record<strin
     };
 }
 
-// ─── Balance Calculation ────────────────────────────────────────────────────
+// ─── Balance — stored directly on the Members table ─────────────────────────
 
+/**
+ * Gets the member's coin balance directly from the `coins` field on their
+ * Members record. This is the single source of truth for balance.
+ */
 export async function getSpendableBalance(memberId: string): Promise<number> {
-    const filter: LarkFilter = {
-        conjunction: 'and',
-        conditions: [
-            { field_name: 'member_id', operator: 'is', value: [memberId] },
-        ],
-    };
+    const memberRecord = await getRecord(TABLE_IDS.members, memberId);
+    return extractNumberValue(memberRecord.fields['coins']);
+}
 
-    const [completionRecords, purchaseRecords] = await Promise.all([
-        withRetry(() => listRecords(TABLE_IDS.questCompletions, filter)),
-        withRetry(() => listRecords(TABLE_IDS.purchases, filter)),
-    ]);
+/**
+ * Awards coins to a member by incrementing their `coins` field.
+ * Reads current balance, adds the award, and writes back.
+ */
+export async function awardCoins(memberId: string, amount: number): Promise<number> {
+    const memberRecord = await getRecord(TABLE_IDS.members, memberId);
+    const currentBalance = extractNumberValue(memberRecord.fields['coins']);
+    const newBalance = currentBalance + amount;
 
-    const totalAwarded = completionRecords.reduce(
-        (sum, r) => sum + extractNumberValue(r.fields['coins_awarded']),
-        0
-    );
+    await updateRecord(TABLE_IDS.members, memberId, { coins: newBalance });
+    return newBalance;
+}
 
-    const totalSpent = purchaseRecords.reduce(
-        (sum, r) => sum + extractNumberValue(r.fields['coins_spent']),
-        0
-    );
+/**
+ * Deducts coins from a member by decrementing their `coins` field.
+ * Returns the new balance. Throws if insufficient funds.
+ */
+export async function deductCoins(memberId: string, amount: number): Promise<number> {
+    const memberRecord = await getRecord(TABLE_IDS.members, memberId);
+    const currentBalance = extractNumberValue(memberRecord.fields['coins']);
 
-    return Math.max(0, totalAwarded - totalSpent);
+    if (currentBalance < amount) {
+        throw new Error('Insufficient coins');
+    }
+
+    const newBalance = currentBalance - amount;
+    await updateRecord(TABLE_IDS.members, memberId, { coins: newBalance });
+    return newBalance;
 }
 
 // ─── Reward Item CRUD ───────────────────────────────────────────────────────
@@ -95,7 +107,7 @@ export async function getPurchaseHistory(memberId: string): Promise<PurchaseReco
 // ─── Purchase Processing ────────────────────────────────────────────────────
 
 export async function processPurchase(memberId: string, itemId: string): Promise<PurchaseRecord> {
-    // 1. Verify balance
+    // 1. Verify balance from member record
     const balance = await getSpendableBalance(memberId);
     const itemRecord = await getRecord(TABLE_IDS.rewardItems, itemId);
     const item = mapRecordToRewardItem(itemRecord);
@@ -109,7 +121,10 @@ export async function processPurchase(memberId: string, itemId: string): Promise
         throw new Error('Item is no longer available');
     }
 
-    // 3. Create purchase record (if this fails, no stock decrement)
+    // 3. Deduct coins from member record
+    await deductCoins(memberId, item.cost);
+
+    // 4. Create purchase record
     const purchaseFields = {
         member_id: memberId,
         reward_item_id: itemId,
@@ -120,14 +135,14 @@ export async function processPurchase(memberId: string, itemId: string): Promise
 
     const purchaseRecord = await createRecord(TABLE_IDS.purchases, purchaseFields);
 
-    // 4. Decrement stock (skip for unlimited)
+    // 5. Decrement stock (skip for unlimited)
     if (item.stockQuantity !== -1) {
         await updateRecord(TABLE_IDS.rewardItems, itemId, {
             stock_quantity: item.stockQuantity - 1,
         });
     }
 
-    // 5. Return mapped purchase record
+    // 6. Return mapped purchase record
     return {
         purchaseId: purchaseRecord.record_id,
         memberId,

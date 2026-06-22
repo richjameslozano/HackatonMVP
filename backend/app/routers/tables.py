@@ -117,8 +117,17 @@ async def search_records(
     cache = _get_cache(request)
     lark_client = _get_lark_client(request)
 
-    # If table is not fully cached, fetch from Lark first (read-through)
-    if not cache.is_table_fully_cached(table_id):
+    # If table is not fully cached OR the full-cache has expired (TTL),
+    # re-fetch from Lark to ensure fresh data.
+    table_obj = cache._tables.get(table_id)
+    is_full_cache_stale = (
+        table_obj is not None
+        and table_obj.fully_cached
+        and table_obj.last_full_fetch_at is not None
+        and (time.time() - table_obj.last_full_fetch_at) > cache._ttl_seconds
+    )
+
+    if not cache.is_table_fully_cached(table_id) or is_full_cache_stale:
         try:
             # Always fetch ALL records for the table (no filter/sort)
             # so the cache has the complete dataset. Filters are applied locally.
@@ -126,7 +135,9 @@ async def search_records(
                 lark_client.list_records(table_id),
                 timeout=10.0,
             )
-            # Cache all fetched records and mark table as fully cached
+            # Replace the entire cache for this table with fresh data
+            if table_obj is not None:
+                table_obj.entries.clear()
             bulk_data = [
                 {"record_id": r.get("record_id", ""), "fields": r.get("fields", {})}
                 for r in lark_records
@@ -134,6 +145,10 @@ async def search_records(
             ]
             if bulk_data:
                 cache.set_bulk(table_id, bulk_data)
+            else:
+                # Table is empty in Lark — clear the cache entries
+                if table_obj is not None:
+                    table_obj.entries.clear()
             cache.mark_table_fully_cached(table_id)
         except asyncio.TimeoutError:
             raise HTTPException(

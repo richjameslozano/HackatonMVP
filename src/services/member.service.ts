@@ -16,6 +16,7 @@ export function mapRecordToMember(record: LarkRecord): Member {
     roles: parseRoles(fields.roles),
     primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
     scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
+    projectId: extractTextValue(fields.project_id) || null,
   };
 }
 

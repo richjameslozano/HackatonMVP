@@ -37,6 +37,7 @@ export interface Member {
   roles: Role[];
   primaryRole: Role;
   scrumMasterId: string | null;
+  projectId: string | null;
 }
 
 export interface QuestEditHistoryEntry {
