@@ -9,37 +9,74 @@ export default {
   theme: {
     extend: {
       colors: {
-        // SP Madrid green palette (from mockups)
-        madrid: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
-        },
-        // Sidebar / dark surfaces
+        // Material Design 3 dark theme with cyan primary
+        background: '#131315',
         surface: {
-          50: '#fafafa',
-          100: '#f4f4f5',
-          200: '#e4e4e7',
-          300: '#d4d4d8',
-          400: '#a1a1aa',
-          500: '#71717a',
-          600: '#52525b',
-          700: '#3f3f46',
-          800: '#27272a',
-          900: '#18181b',
-          950: '#09090b',
+          DEFAULT: '#131315',
+          container: '#201f21',
+          'container-low': '#1c1b1d',
+          'container-high': '#2a2a2c',
+          'container-highest': '#353437',
+          // Legacy surface scale (mapped to new dark palette)
+          50: '#353437',
+          100: '#2a2a2c',
+          200: '#3c494e',
+          300: '#4a4a4e',
+          400: '#859398',
+          500: '#9ca3af',
+          600: '#bbc9cf',
+          700: '#e5e1e4',
+          800: '#201f21',
+          900: '#131315',
+          950: '#0a0a0b',
+        },
+        primary: {
+          DEFAULT: '#a8e8ff',
+          container: '#00d4ff',
+          'fixed-dim': '#3cd7ff',
+        },
+        'on-primary': {
+          DEFAULT: '#003642',
+          container: '#00586b',
+        },
+        secondary: {
+          DEFAULT: '#c6c4df',
+          container: '#47475d',
+        },
+        tertiary: {
+          DEFAULT: '#e6d8ff',
+          container: '#cdb7ff',
+        },
+        'on-surface': {
+          DEFAULT: '#e5e1e4',
+          variant: '#bbc9cf',
+        },
+        outline: {
+          DEFAULT: '#859398',
+          variant: '#3c494e',
+        },
+        error: {
+          DEFAULT: '#ffb4ab',
+          container: '#93000a',
+        },
+        // Legacy madrid color mapped to cyan accent
+        madrid: {
+          50: '#0a2a33',
+          100: '#003642',
+          200: '#00586b',
+          300: '#00849e',
+          400: '#00b8d4',
+          500: '#3cd7ff',
+          600: '#00d4ff',
+          700: '#a8e8ff',
+          800: '#d0f4ff',
+          900: '#e8faff',
+          950: '#f5fdff',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Space Grotesk', 'system-ui', '-apple-system', 'sans-serif'],
+        headline: ['Space Grotesk', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       animation: {
@@ -49,6 +86,8 @@ export default {
         'slide-in-left': 'slideInLeft 0.3s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'confetti-burst': 'confettiBurst 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+        'scanline': 'scanline 8s linear infinite',
+        'blink': 'blink 1s step-end infinite',
       },
       keyframes: {
         fadeIn: {
@@ -72,11 +111,26 @@ export default {
           '70%': { opacity: '1' },
           '100%': { opacity: '0', transform: 'translate(var(--confetti-tx), var(--confetti-ty)) rotate(var(--confetti-rot)) scale(0.3)' },
         },
+        scanline: {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        blink: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
-        'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04)',
-        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04)',
+        'card': '0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3)',
+        'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3)',
+        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4)',
+        'glow': '0 0 15px rgba(0, 212, 255, 0.3)',
+        'glow-lg': '0 0 25px rgba(0, 212, 255, 0.4)',
+        'neon': '0 0 5px rgba(60, 215, 255, 0.5), 0 0 10px rgba(60, 215, 255, 0.3)',
       },
     },
   },

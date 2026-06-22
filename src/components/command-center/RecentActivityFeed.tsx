@@ -48,7 +48,7 @@ function getActivityIcon(type: RecentActivityEntry['type']): { bg: string; icon:
     switch (type) {
         case 'completion':
             return {
-                bg: 'bg-green-100 text-green-600',
+                bg: 'bg-green-900/30 text-green-400',
                 icon: (
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path
@@ -61,7 +61,7 @@ function getActivityIcon(type: RecentActivityEntry['type']): { bg: string; icon:
             };
         case 'proposal':
             return {
-                bg: 'bg-blue-100 text-blue-600',
+                bg: 'bg-blue-900/30 text-blue-400',
                 icon: (
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -70,7 +70,7 @@ function getActivityIcon(type: RecentActivityEntry['type']): { bg: string; icon:
             };
         case 'status_change':
             return {
-                bg: 'bg-orange-100 text-orange-600',
+                bg: 'bg-orange-900/30 text-orange-400',
                 icon: (
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path
@@ -128,7 +128,7 @@ export function RecentActivityFeed({
     return (
         <div className="relative">
             <div className="card !p-0">
-                <ul className="divide-y divide-surface-100" role="list" aria-label="Recent activity feed">
+                <ul className="divide-y divide-[#3c494e]/50" role="list" aria-label="Recent activity feed">
                     {activities.map((entry) => {
                         const { bg, icon } = getActivityIcon(entry.type);
                         const actionDescription = getActionDescription(entry);
@@ -145,16 +145,16 @@ export function RecentActivityFeed({
 
                                 {/* Activity content */}
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm text-surface-700">
-                                        <span className="font-semibold text-surface-900">
+                                    <p className="text-sm text-[#bbc9cf]">
+                                        <span className="font-semibold text-[#e5e1e4]">
                                             {entry.developerName}
                                         </span>{' '}
                                         {actionDescription}{' '}
-                                        <span className="font-medium text-surface-700">
+                                        <span className="font-medium text-[#e5e1e4]">
                                             {entry.questTitle}
                                         </span>
                                     </p>
-                                    <p className="mt-0.5 text-xs text-surface-400">
+                                    <p className="mt-0.5 text-xs text-[#859398]">
                                         {formatRelativeTime(entry.timestamp)}
                                     </p>
                                 </div>
@@ -165,10 +165,10 @@ export function RecentActivityFeed({
 
                 {/* Load Older Activity button */}
                 {hasMore && onLoadMore && (
-                    <div className="border-t border-surface-100 px-4 py-3">
+                    <div className="border-t border-[#3c494e]/50 px-4 py-3">
                         <button
                             onClick={onLoadMore}
-                            className="w-full rounded-lg border border-surface-200 px-4 py-2 text-sm font-medium text-surface-600 transition-colors hover:bg-surface-50 hover:text-surface-900 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2"
+                            className="w-full rounded-lg border border-[#3c494e] px-4 py-2 text-sm font-medium text-[#bbc9cf] transition-colors hover:bg-[#2a2a2c] hover:text-[#e5e1e4] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-2"
                         >
                             Load Older Activity
                         </button>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store/app.store';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -9,13 +9,17 @@ export function AppShell() {
   const notificationWarning = useAppStore((s) => s.notificationWarning);
   const clearNotificationWarning = useAppStore((s) => s.clearNotificationWarning);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const selectedRole = useAppStore((s) => s.selectedRole);
+  const location = useLocation();
+
+  const showRightPanel = location.pathname === '/quests' && selectedRole === 'developer';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-100">
+    <div className="flex h-screen overflow-hidden bg-[#131315]">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -25,13 +29,13 @@ export function AppShell() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className={`flex flex-1 flex-col overflow-hidden lg:ml-64 ${showRightPanel ? 'lg:mr-[340px]' : ''}`}>
         {/* Top bar */}
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl animate-fade-slide-up">
+          <div className="mx-auto animate-fade-slide-up max-w-full">
             <Outlet />
           </div>
         </main>

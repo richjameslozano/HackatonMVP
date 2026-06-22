@@ -98,7 +98,7 @@ export function CommandCenterPage() {
             setPendingTasks(pendingItems);
         } catch (err) {
             console.error('[CommandCenter] Failed to load data:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load Command Center data');
+            setError(err instanceof Error ? err.message : 'Failed to load Scrum Master Dashboard data');
         } finally {
             setLoading(false);
         }
@@ -140,35 +140,33 @@ export function CommandCenterPage() {
 
     // Wait for current member to be loaded before making access decisions
     if (!currentMember) {
-        return <LoadingIndicator size="lg" message="Loading Command Center..." />;
+        return <LoadingIndicator size="lg" message="Loading Scrum Master Dashboard..." />;
     }
 
     // Access control
     if (!isScrumMaster) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-                <svg className="mx-auto h-16 w-16 text-surface-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-                <h2 className="mt-4 text-lg font-semibold text-surface-900">Access Restricted</h2>
-                <p className="mt-2 text-sm text-surface-500">
-                    The Command Center is only available to Scrum Masters.
+                <span className="material-symbols-outlined text-6xl text-[#859398]">lock</span>
+                <h2 className="mt-4 text-lg font-semibold text-[#e5e1e4]">Access Restricted</h2>
+                <p className="mt-2 text-sm text-[#859398]">
+                    The Scrum Master Dashboard is only available to Scrum Masters.
                 </p>
             </div>
         );
     }
 
     if (loading) {
-        return <LoadingIndicator size="lg" message="Loading Command Center..." />;
+        return <LoadingIndicator size="lg" message="Loading Scrum Master Dashboard..." />;
     }
 
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-sm text-red-600 mb-4">{error}</p>
+                <p className="text-sm text-red-400 mb-4 font-mono">{error}</p>
                 <button
                     onClick={() => void loadData()}
-                    className="rounded-lg bg-madrid-600 px-4 py-2 text-sm font-medium text-white hover:bg-madrid-700"
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-[#00d4ff] border border-[#00d4ff]/40 hover:bg-[#00d4ff]/10 transition-colors"
                 >
                     Retry
                 </button>
@@ -176,112 +174,177 @@ export function CommandCenterPage() {
         );
     }
 
-    const backlogRemaining = stats ? stats.totalTasks - stats.completedTasks : 0;
+    const completionPct = stats?.completionPercentage ?? 0;
+    const gaugeRadius = 90;
+    const gaugeCircumference = 2 * Math.PI * gaugeRadius;
+    const gaugeOffset = gaugeCircumference - (completionPct / 100) * gaugeCircumference;
 
     return (
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
-                    MADRID_HQ // COMMAND_CENTER
+                <p className="label-mono text-[#859398] tracking-widest">
+                    MADRID_HQ // SCRUM_MASTER
                 </p>
-                <h1 className="mt-1 text-2xl font-bold text-surface-900">Command Center</h1>
-                <p className="mt-1 text-sm text-surface-500">
+                <h1 className="mt-1 text-[48px] font-bold text-gradient leading-tight font-headline">
+                    Mission Control
+                </h1>
+                <p className="mt-1 text-sm text-[#bbc9cf] font-mono">
                     Monitor team progress, review blockers, and manage developer workflows.
                 </p>
             </div>
 
-            {/* Summary Stats Bar */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-                <StatCard label="Devs" value={stats?.totalDevelopers ?? 0} icon="👥" />
-                <StatCard label="Total Tasks" value={stats?.totalTasks ?? 0} icon="📋" />
-                <StatCard label="Active" value={stats?.activeTasks ?? 0} icon="🟢" color="text-green-600" />
-                <StatCard label="Pending" value={stats?.pendingTasks ?? 0} icon="🟡" color="text-amber-600" />
-                <StatCard label="Rejected" value={stats?.rejectedTasks ?? 0} icon="🔴" color="text-red-600" />
-                <StatCard label="Blocked" value={stats?.blockedTasks ?? 0} icon="⛔" color="text-red-700" />
+            {/* Stats Cards Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
-                    label="Completion"
-                    value={`${stats?.completionPercentage ?? 0}%`}
-                    icon="📊"
-                    color="text-madrid-600"
+                    label="Active Developers"
+                    value={stats?.totalDevelopers ?? 0}
+                    icon="groups"
+                    color="#00d4ff"
+                    progress={(stats?.totalDevelopers ?? 0) > 0 ? 100 : 0}
+                />
+                <StatCard
+                    label="Total Quests"
+                    value={stats?.totalTasks ?? 0}
+                    icon="terminal"
+                    color="#00d4ff"
+                    progress={stats ? Math.min((stats.totalTasks / Math.max(stats.totalTasks, 1)) * 100, 100) : 0}
+                />
+                <StatCard
+                    label="In Progress"
+                    value={stats?.activeTasks ?? 0}
+                    icon="bolt"
+                    color="#d1bcff"
+                    progress={stats ? (stats.activeTasks / Math.max(stats.totalTasks, 1)) * 100 : 0}
+                />
+                <StatCard
+                    label="Pending Intel"
+                    value={stats?.pendingTasks ?? 0}
+                    icon="hourglass_top"
+                    color="#c6c4df"
+                    progress={stats ? (stats.pendingTasks / Math.max(stats.totalTasks, 1)) * 100 : 0}
                 />
             </div>
 
-            {/* Main Content Layout: 2/3 left + 1/3 right */}
+            {/* Main Content: Team Progress + Pending Reviews */}
             <div className="grid gap-6 lg:grid-cols-3">
-                {/* Main Content (Left 2/3) */}
+                {/* Team Progress Section (Left 2/3) */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Overall Team Progress */}
-                    <div className="card">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-surface-900">Overall Team Progress</h2>
-                            <span className="text-sm text-surface-500">
-                                {stats?.completedTasks ?? 0} / {stats?.totalTasks ?? 0} tasks completed
-                            </span>
+                    {/* Large Circular Gauge */}
+                    <div className="glass-panel p-6 relative overflow-hidden scanline">
+                        <h2 className="label-mono text-[#859398] text-center mb-4 tracking-widest">
+                            OVERALL TEAM PROGRESS
+                        </h2>
+                        <div className="flex justify-center">
+                            <div className="relative">
+                                <svg width="220" height="220" className="transform -rotate-90">
+                                    {/* Background track */}
+                                    <circle
+                                        cx="110"
+                                        cy="110"
+                                        r={gaugeRadius}
+                                        fill="none"
+                                        stroke="#2a2a2c"
+                                        strokeWidth="12"
+                                    />
+                                    {/* Progress arc */}
+                                    <circle
+                                        cx="110"
+                                        cy="110"
+                                        r={gaugeRadius}
+                                        fill="none"
+                                        stroke="url(#gaugeGradient)"
+                                        strokeWidth="12"
+                                        strokeLinecap="round"
+                                        strokeDasharray={gaugeCircumference}
+                                        strokeDashoffset={gaugeOffset}
+                                        style={{
+                                            filter: 'drop-shadow(0 0 8px rgba(0, 212, 255, 0.6))',
+                                            transition: 'stroke-dashoffset 1s ease-out',
+                                        }}
+                                    />
+                                    <defs>
+                                        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stopColor="#00d4ff" />
+                                            <stop offset="100%" stopColor="#d1bcff" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                {/* Center text */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className="text-4xl font-bold text-[#e5e1e4] font-mono">
+                                        {completionPct}%
+                                    </span>
+                                    <span className="text-xs text-[#859398] font-mono mt-1">
+                                        COMPLETE
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Large Progress Bar */}
-                        <div className="relative h-6 w-full overflow-hidden rounded-full bg-surface-100">
-                            <div
-                                className="h-full rounded-full bg-gradient-to-r from-madrid-500 to-madrid-600 transition-all duration-500"
-                                style={{ width: `${stats?.completionPercentage ?? 0}%` }}
-                            />
-                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-surface-700">
-                                {stats?.completionPercentage ?? 0}%
-                            </span>
-                        </div>
-
-                        {/* Backlog Info */}
-                        <div className="mt-4 flex items-center justify-between text-sm">
-                            <span className="text-surface-500">
-                                Backlog remaining: <span className="font-medium text-surface-700">{backlogRemaining} tasks</span>
-                            </span>
-                            <span className="text-surface-500">
-                                Goal: <span className="font-medium text-surface-700">{stats?.totalTasks ?? 0} tasks</span>
-                            </span>
+                        {/* 3 column stats below gauge */}
+                        <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-[#3c494e]/50">
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-[#00d4ff] font-mono">{stats?.completedTasks ?? 0}</p>
+                                <p className="label-mono text-[#859398] mt-1">Completed</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-[#d1bcff] font-mono">{stats?.activeTasks ?? 0}</p>
+                                <p className="label-mono text-[#859398] mt-1">In Progress</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-[#c6c4df] font-mono">{stats?.totalTasks ?? 0}</p>
+                                <p className="label-mono text-[#859398] mt-1">Total Tasks</p>
+                            </div>
                         </div>
                     </div>
 
                     {/* Developer Progress Table */}
                     {overview && (
-                        <DeveloperProgressTable
-                            developers={overview.developers}
-                            onViewDetails={handleViewDetails}
-                        />
+                        <div className="glass-panel p-5">
+                            <DeveloperProgressTable
+                                developers={overview.developers}
+                                onViewDetails={handleViewDetails}
+                            />
+                        </div>
                     )}
                 </div>
 
                 {/* Sidebar (Right 1/3) */}
                 <div className="space-y-6">
                     {/* Pending Reviews */}
-                    <PendingReviews
-                        pendingTasks={pendingTasks}
-                        onTaskClick={handlePendingTaskClick}
-                        onViewAll={handleViewAllReviews}
-                    />
+                    <div className="glass-panel p-5">
+                        <PendingReviews
+                            pendingTasks={pendingTasks}
+                            onTaskClick={handlePendingTaskClick}
+                            onViewAll={handleViewAllReviews}
+                        />
+                    </div>
 
                     {/* Task Distribution */}
                     {distribution && (
-                        <TaskDistributionChart distribution={distribution} />
+                        <div className="glass-panel p-5">
+                            <TaskDistributionChart distribution={distribution} />
+                        </div>
                     )}
 
                     {/* Blockers & Risks */}
                     {overview && (
-                        <BlockersPanel
-                            developers={overview.developers}
-                            recentActivity={recentActivity}
-                        />
+                        <div className="glass-panel p-5">
+                            <BlockersPanel
+                                developers={overview.developers}
+                                recentActivity={recentActivity}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
 
             {/* Bottom: Recent Activity Feed */}
-            <div className="card">
+            <div className="glass-panel p-5 relative overflow-hidden">
                 <div className="flex items-center gap-2 mb-4">
-                    <svg className="h-5 w-5 text-madrid-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 className="text-base font-semibold text-surface-900">Recent Activity</h3>
+                    <span className="material-symbols-outlined text-[#00d4ff]">schedule</span>
+                    <h3 className="label-mono text-[#bbc9cf] tracking-wider">Recent Activity</h3>
                 </div>
                 <RecentActivityFeed
                     activities={recentActivity}
@@ -310,14 +373,43 @@ interface StatCardProps {
     value: number | string;
     icon: string;
     color?: string;
+    progress?: number;
 }
 
-function StatCard({ label, value, icon, color = 'text-surface-900' }: StatCardProps) {
+function StatCard({ label, value, icon, color = '#00d4ff', progress = 0 }: StatCardProps) {
     return (
-        <div className="card flex flex-col items-center gap-1 p-3 text-center">
-            <span className="text-lg">{icon}</span>
-            <span className={`text-xl font-bold ${color}`}>{value}</span>
-            <span className="text-xs text-surface-500">{label}</span>
+        <div
+            className="relative overflow-hidden rounded-xl p-4 scanline"
+            style={{
+                background: 'rgba(25, 25, 35, 0.7)',
+                backdropFilter: 'blur(12px)',
+                borderTop: '1px solid rgba(0, 212, 255, 0.2)',
+                borderLeft: '1px solid rgba(0, 212, 255, 0.2)',
+                borderRight: '1px solid transparent',
+                borderBottom: '1px solid transparent',
+            }}
+        >
+            <div className="flex flex-col gap-2">
+                <span
+                    className="material-symbols-outlined text-3xl"
+                    style={{ color }}
+                >
+                    {icon}
+                </span>
+                <span className="label-mono text-[#859398]">{label}</span>
+                <span className="text-3xl font-bold font-mono text-[#e5e1e4]">{value}</span>
+            </div>
+            {/* Gradient progress bar at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#2a2a2c]">
+                <div
+                    className="h-full transition-all duration-700 rounded-r"
+                    style={{
+                        width: `${Math.min(progress, 100)}%`,
+                        background: `linear-gradient(90deg, ${color}, ${color}88)`,
+                        boxShadow: `0 0 8px ${color}66`,
+                    }}
+                />
+            </div>
         </div>
     );
 }

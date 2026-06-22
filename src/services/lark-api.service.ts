@@ -1,6 +1,6 @@
 import type { LarkFilter, LarkRecord, LarkSort } from '../types';
-import { BACKEND_CONFIG } from './config';
-import { createTimeoutSignal } from './auth.service';
+import { BACKEND_CONFIG, LARK_CONFIG } from './config';
+import { createTimeoutSignal, getTenantToken } from './auth.service';
 import { useAppStore } from '../store/app.store';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export function extractNumberValue(value: unknown): number {
 // ─── URL Construction ───────────────────────────────────────────────────────
 
 function getBaseTableUrl(tableId: string): string {
-    return `${BACKEND_CONFIG.baseUrl}/api/tables/${tableId}/records`;
+    return `${LARK_CONFIG.baseUrl}/bitable/v1/apps/${LARK_CONFIG.baseAppToken}/tables/${tableId}/records`;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -160,10 +160,11 @@ export async function listRecords(
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
+            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(body),
@@ -175,15 +176,16 @@ export async function listRecords(
             }
 
             const data = (await response.json()) as {
-                records?: Array<{ record_id: string; fields: Record<string, unknown> }>;
-                total?: number;
+                code: number;
+                msg: string;
+                data: { items?: Array<{ record_id: string; fields: Record<string, unknown> }> };
             };
 
-            if (!data.records) {
+            if (!data.data?.items) {
                 return [];
             }
 
-            return data.records.map((item) => ({
+            return data.data.items.map((item) => ({
                 record_id: item.record_id,
                 fields: item.fields,
             }));
@@ -206,10 +208,11 @@ export async function getRecord(
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
+            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 signal,
@@ -220,17 +223,18 @@ export async function getRecord(
             }
 
             const data = (await response.json()) as {
-                record_id: string;
-                fields: Record<string, unknown>;
+                code: number;
+                msg: string;
+                data: { record?: { record_id: string; fields: Record<string, unknown> } };
             };
 
-            if (!data.record_id) {
+            if (!data.data?.record) {
                 throw new Error('getRecord: record not found');
             }
 
             return {
-                record_id: data.record_id,
-                fields: data.fields,
+                record_id: data.data.record.record_id,
+                fields: data.data.record.fields,
             };
         } finally {
             cleanup();
@@ -249,16 +253,16 @@ export async function createRecord(
     options?: { sync?: boolean }
 ): Promise<LarkRecord> {
     return withBackendRetry(async () => {
-        const syncParam = options?.sync ? '?sync=true' : '';
-        const url = `${getBaseTableUrl(tableId)}${syncParam}`;
+        const url = `${getBaseTableUrl(tableId)}`;
 
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
+            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ fields }),
@@ -271,13 +275,14 @@ export async function createRecord(
             }
 
             const data = (await response.json()) as {
-                record_id: string;
-                fields: Record<string, unknown>;
+                code: number;
+                msg: string;
+                data: { record: { record_id: string; fields: Record<string, unknown> } };
             };
 
             return {
-                record_id: data.record_id,
-                fields: data.fields,
+                record_id: data.data.record.record_id,
+                fields: data.data.record.fields,
             };
         } finally {
             cleanup();
@@ -299,10 +304,11 @@ export async function updateRecord(
         const { signal, cleanup } = createTimeoutSignal();
 
         try {
+            const token = await getTenantToken();
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
-                    Authorization: `Bearer ${BACKEND_CONFIG.apiSecret}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ fields }),
@@ -314,13 +320,21 @@ export async function updateRecord(
             }
 
             const data = (await response.json()) as {
-                record_id: string;
-                fields: Record<string, unknown>;
+                code: number;
+                msg: string;
+                data?: { record?: { record_id: string; fields: Record<string, unknown> } };
             };
 
+            if (data.data?.record) {
+                return {
+                    record_id: data.data.record.record_id,
+                    fields: data.data.record.fields,
+                };
+            }
+
             return {
-                record_id: data.record_id,
-                fields: data.fields,
+                record_id: recordId,
+                fields,
             };
         } finally {
             cleanup();

@@ -7,47 +7,112 @@ interface BadgeCardProps {
 }
 
 export function BadgeCard({ badge, earned, earnedAt }: BadgeCardProps) {
+  // Pick a Material Symbol icon based on badge name keywords
+  const iconName = getIconForBadge(badge.name);
+
   return (
     <div
-      className={`flex flex-col items-center gap-3 rounded-xl border p-5 text-center transition-all ${earned
-          ? 'border-madrid-200 bg-white shadow-card hover:shadow-card-hover'
-          : 'border-surface-200 bg-surface-50 opacity-70'
+      className={`glass-panel glow-border flex flex-col items-center gap-3 p-5 text-center transition-all duration-300 ${earned
+          ? 'hover:-translate-y-1 hover:scale-[1.02]'
+          : 'opacity-60 grayscale'
         }`}
+      style={
+        !earned
+          ? { borderStyle: 'dashed', borderColor: 'rgba(0, 212, 255, 0.15)' }
+          : undefined
+      }
       aria-label={`Badge: ${badge.name}, ${earned ? 'Earned' : 'Locked'}`}
     >
-      {/* Badge icon */}
-      <div className={`relative flex h-16 w-16 items-center justify-center rounded-full ${earned ? 'bg-madrid-100' : 'bg-surface-200'
-        }`}>
-        {badge.iconUrl ? (
-          <img
-            src={badge.iconUrl}
-            alt={badge.name}
-            className={`h-10 w-10 ${earned ? '' : 'grayscale opacity-50'}`}
-          />
-        ) : (
-          <svg className={`h-8 w-8 ${earned ? 'text-madrid-600' : 'text-surface-400'}`} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.746 3.746 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-          </svg>
+      {/* Badge icon container */}
+      <div className="relative">
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-full"
+          style={{
+            background: 'rgba(42, 42, 44, 0.7)',
+            backdropFilter: 'blur(8px)',
+            border: earned
+              ? '2px solid #00d4ff'
+              : '2px solid rgba(60, 73, 78, 0.6)',
+          }}
+        >
+          {earned ? (
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: '36px',
+                color: '#00d4ff',
+                fontVariationSettings: "'FILL' 1",
+              }}
+            >
+              {iconName}
+            </span>
+          ) : (
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: '36px', color: '#859398' }}
+            >
+              lock
+            </span>
+          )}
+        </div>
+
+        {/* Green checkmark for earned */}
+        {earned && (
+          <div
+            className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full"
+            style={{ background: '#22c55e', border: '2px solid #131315' }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: '14px', color: '#fff' }}
+            >
+              check
+            </span>
+          </div>
         )}
       </div>
 
       {/* Badge name */}
-      <h3 className={`text-sm font-semibold ${earned ? 'text-surface-900' : 'text-surface-500'}`}>
+      <h3
+        className="text-sm font-bold leading-tight"
+        style={{ color: earned ? '#e5e1e4' : '#859398' }}
+      >
         {badge.name}
       </h3>
 
-      {/* Description for locked / date for earned */}
+      {/* Description */}
+      <p
+        className="text-xs leading-relaxed line-clamp-2"
+        style={{ color: '#859398' }}
+      >
+        {badge.description}
+      </p>
+
+      {/* Bottom: earned date or locked label */}
       {earned ? (
         earnedAt && (
-          <p className="text-xs text-surface-400">
+          <span className="label-mono mt-auto" style={{ color: '#3cd7ff' }}>
             Earned {earnedAt.toLocaleDateString()}
-          </p>
+          </span>
         )
       ) : (
-        <p className="text-xs text-surface-400 line-clamp-2">
-          {badge.description}
-        </p>
+        <span className="label-mono mt-auto" style={{ color: '#859398' }}>
+          Locked
+        </span>
       )}
     </div>
   );
+}
+
+// ─── Icon Helper ────────────────────────────────────────────────────────────
+
+function getIconForBadge(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes('speed') || lower.includes('fast')) return 'speed';
+  if (lower.includes('security') || lower.includes('shield')) return 'shield';
+  if (lower.includes('architect') || lower.includes('design')) return 'architecture';
+  if (lower.includes('terminal') || lower.includes('code')) return 'terminal';
+  if (lower.includes('star') || lower.includes('premium')) return 'workspace_premium';
+  if (lower.includes('first') || lower.includes('beginner')) return 'military_tech';
+  return 'military_tech';
 }

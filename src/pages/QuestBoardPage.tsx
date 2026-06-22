@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppStore } from '../store/app.store';
-import { QuestCategory, PendingTaskCard, ProposeTaskForm, ResubmitTaskModal } from '../components/quest';
+import { QuestCategory, ProposeTaskForm, ResubmitTaskModal } from '../components/quest';
 import { LoadingIndicator, CompletionAnimation, ConfirmationToast, ConfettiAnimation } from '../components/shared';
 import { canResubmitTask } from '../utils/permissions';
 import type { Quest, Difficulty } from '../types';
@@ -8,6 +9,18 @@ import type { Quest, Difficulty } from '../types';
 interface ToastState {
   message: string;
   type: 'success' | 'warning';
+}
+
+function timeAgo(date: Date): string {
+  const now = Date.now();
+  const diff = now - new Date(date).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 export function QuestBoardPage() {
@@ -34,6 +47,12 @@ export function QuestBoardPage() {
 
   const [toast, setToast] = useState<ToastState | null>(null);
   const [resubmitQuest, setResubmitQuest] = useState<Quest | null>(null);
+  const [showAllPendingModal, setShowAllPendingModal] = useState(false);
+  const [reviewingQuestId, setReviewingQuestId] = useState<string | null>(null);
+
+  const pendingTasks = useMemo(() => quests?.pending ?? [], [quests]);
+  const visiblePendingTasks = useMemo(() => pendingTasks.slice(0, 3), [pendingTasks]);
+  const hasMorePending = pendingTasks.length > 0;
 
   const handleComplete = useCallback(
     async (questId: string) => {
@@ -155,45 +174,88 @@ export function QuestBoardPage() {
         />
       )}
 
-      {/* Page header - Agent view only */}
-      {selectedRole === 'agent' && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
-            MADRID_HQ // QUEST_BOARD
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-surface-900">Agent Quest Board</h1>
-          <p className="mt-1 text-sm text-surface-500">
-            Complete quests to earn badges and climb the leaderboard.
+      {/* Hero branding section */}
+      <div className="relative glass-panel scanline overflow-hidden p-8 border-2 border-[rgba(0,212,255,0.2)] rounded-xl">
+        <div className="relative z-10">
+          <h1 className="font-headline text-[48px] font-bold text-[#3cd7ff] tracking-tight leading-tight">
+            {selectedRole === 'developer' ? 'Developer Quest Board' : 'Agent Quest Board'}
+          </h1>
+          <p className="mt-3 text-base text-[#bbc9cf] max-w-2xl">
+            {selectedRole === 'developer'
+              ? 'Accept challenges, squash bugs, and earn EXP. The realm of code awaits your mastery. ⚔️'
+              : 'Complete quests to earn badges and climb the leaderboard. Your journey begins here.'
+            }
           </p>
         </div>
-      )}
+      </div>
 
       {/* Agent View */}
       {selectedRole === 'agent' && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main content - 2 columns */}
-          <div className="lg:col-span-2 space-y-6">
-            <QuestCategory
-              title="Agent Onboarding"
-              quests={quests?.onboarding ?? []}
-              onComplete={handleComplete}
-              completedQuestIds={completedQuestIds}
-              icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
-                </svg>
-              }
-            />
+        <div className="space-y-6">
+          <QuestCategory
+            title="Agent Onboarding"
+            quests={quests?.onboarding ?? []}
+            onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
+            icon={
+              <span className="material-symbols-outlined text-2xl">school</span>
+            }
+          />
 
+          <QuestCategory
+            title="Agent Milestones"
+            quests={quests?.milestones ?? []}
+            onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
+            icon={
+              <span className="material-symbols-outlined text-2xl">emoji_events</span>
+            }
+          />
+
+          {(quests?.assigned ?? []).length > 0 && (
             <QuestCategory
-              title="Agent Milestones"
-              quests={quests?.milestones ?? []}
+              title="Assigned to You"
+              quests={quests?.assigned ?? []}
+              onComplete={handleComplete}
+              completedQuestIds={completedQuestIds}
+            />
+          )}
+
+          {(quests?.open ?? []).length > 0 && (
+            <QuestCategory
+              title="Open Tasks (Optional)"
+              quests={quests?.open ?? []}
+              onComplete={handleComplete}
+              completedQuestIds={completedQuestIds}
+              emptyMessage="No open tasks available"
+            />
+          )}
+
+          <QuestCategory
+            title="Daily Quests"
+            quests={quests?.daily ?? []}
+            onComplete={handleComplete}
+            completedQuestIds={completedQuestIds}
+            showStreak
+            icon={
+              <span className="material-symbols-outlined text-2xl">schedule</span>
+            }
+          />
+        </div>
+      )}
+
+      {/* Developer View */}
+      {selectedRole === 'developer' && (
+        <>
+          {/* Main content — single column */}
+          <div className="space-y-6">
+            <QuestCategory
+              title="Approved Sprint Tasks"
+              quests={quests?.sprint ?? []}
               onComplete={handleComplete}
               completedQuestIds={completedQuestIds}
               icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.996.178-1.768.65-2.08 1.283m0 0a5.334 5.334 0 003.168 1.647m-3.168-1.647a3 3 0 01-.327-1.267M20.83 5.519c.996.178 1.768.65 2.08 1.283m0 0a5.334 5.334 0 01-3.168 1.647m3.168-1.647a3 3 0 00.327-1.267" />
-                </svg>
+                <span className="material-symbols-outlined text-2xl">check_circle</span>
               }
             />
 
@@ -217,151 +279,348 @@ export function QuestBoardPage() {
             )}
           </div>
 
-          {/* Sidebar - Daily quests */}
-          <div className="space-y-6">
-            <QuestCategory
-              title="Daily Quests"
-              quests={quests?.daily ?? []}
-              onComplete={handleComplete}
-              completedQuestIds={completedQuestIds}
-              showStreak
-              icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Developer View */}
-      {selectedRole === 'developer' && (
-        <>
-          {/* Developer header with Propose Task button */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-madrid-600">
-                MADRID_HQ // SPRINT_04
-              </p>
-              <h1 className="mt-1 text-2xl font-bold text-surface-900">Developer Quest Board</h1>
-              <p className="mt-1 text-sm text-surface-500">
-                Overview of active development sprints and community-proposed features.
-              </p>
-            </div>
-            <ProposeTaskForm onSubmit={handlePropose} />
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Main content */}
-            <div className="lg:col-span-2 space-y-6">
-              <QuestCategory
-                title="Approved Sprint Tasks"
-                quests={quests?.sprint ?? []}
-                onComplete={handleComplete}
-                completedQuestIds={completedQuestIds}
-                icon={
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                }
-              />
-
-              {(quests?.assigned ?? []).length > 0 && (
-                <QuestCategory
-                  title="Assigned to You"
-                  quests={quests?.assigned ?? []}
-                  onComplete={handleComplete}
-                  completedQuestIds={completedQuestIds}
-                />
-              )}
-
-              {(quests?.open ?? []).length > 0 && (
-                <QuestCategory
-                  title="Open Tasks (Optional)"
-                  quests={quests?.open ?? []}
-                  onComplete={handleComplete}
-                  completedQuestIds={completedQuestIds}
-                  emptyMessage="No open tasks available"
-                />
-              )}
+          {/* Fixed Right Panel */}
+          <aside className="hidden lg:block w-[340px] h-screen fixed right-0 top-0 glass-panel rounded-none border-l border-[rgba(0,212,255,0.1)] p-6 z-40 overflow-y-auto">
+            {/* In-Review Quests header */}
+            <div className="flex items-center gap-2 mb-6 pt-4">
+              <span className="material-symbols-outlined text-[#3cd7ff] text-xl">pending_actions</span>
+              <h3 className="font-headline text-lg font-bold text-[#e5e1e4]">In-Review Quests</h3>
             </div>
 
-            {/* Sidebar - Pending tasks */}
-            <div className="space-y-6">
-              <div className="card">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="h-5 w-5 text-madrid-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h3 className="text-base font-semibold text-surface-900">Pending Approval</h3>
-                </div>
-                {(quests?.pending ?? []).length === 0 ? (
-                  <p className="py-2 text-sm text-surface-400 italic">Awaiting first vote</p>
-                ) : (
-                  <div className="space-y-3">
-                    {(quests?.pending ?? []).map((quest) => (
-                      <PendingTaskCard
-                        key={quest.questId}
-                        quest={quest}
-                        currentMemberId={currentMember?.memberId ?? ''}
-                        isScrumMaster={isScrumMaster}
-                        proposerName={quest.proposerId === currentMember?.memberId ? currentMember?.displayName : undefined}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
-                        onEdit={handleEditPendingTask}
-                        onWithdraw={handleWithdrawTask}
-                      />
-                    ))}
+            {/* Pending tasks (limited to 5) — new inline card design */}
+            {pendingTasks.length === 0 ? (
+              <p className="py-2 text-sm text-[#859398] italic">No tasks awaiting review</p>
+            ) : (
+              <div className="space-y-3 mb-6">
+                {visiblePendingTasks.map((quest) => (
+                  <div
+                    key={quest.questId}
+                    className="bg-[#201f21] border border-[#3c494e]/30 hover:border-[rgba(0,212,255,0.5)] p-4 rounded-lg transition-colors"
+                  >
+                    {/* Top row: badge + time */}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#d1bcff] bg-[rgba(205,183,255,0.1)] border border-[rgba(205,183,255,0.3)] px-2 py-0.5 rounded">
+                        Review Pending
+                      </span>
+                      <span className="text-[10px] text-[#859398] font-mono">
+                        {timeAgo(quest.createdAt)}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h4 className="font-headline text-[16px] font-bold text-white leading-tight mb-1">
+                      {quest.title}
+                    </h4>
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded mt-1 inline-block">
+                      Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
+                    </span>
+
+                    {/* Description */}
+                    {quest.description && (
+                      <p className="text-xs text-[#859398] line-clamp-2 mb-3">
+                        {quest.description}
+                      </p>
+                    )}
+
+                    {/* Bottom row: 3 buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(quest.questId)}
+                        className="flex-1 text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded bg-[rgba(0,212,255,0.2)] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.3)] transition-colors"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReject(quest.questId, 'Rejected via quick action')}
+                        className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReviewingQuestId(quest.questId)}
+                        className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
+                      >
+                        Review
+                      </button>
+                    </div>
                   </div>
+                ))}
+
+                {/* REVIEW ALL button */}
+                {hasMorePending && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPendingModal(true)}
+                    className="w-full border border-[rgba(0,212,255,0.4)] text-[#3cd7ff] py-3 font-mono uppercase tracking-widest text-sm hover:bg-[rgba(0,212,255,0.05)] transition-colors flex items-center justify-center gap-2 rounded-lg"
+                  >
+                    <span className="material-symbols-outlined text-base">tune</span>
+                    Review All
+                  </button>
                 )}
               </div>
+            )}
 
-              {/* Rejected Tasks — shows rejected tasks proposed by current user */}
-              {(quests?.rejected ?? []).length > 0 && (
-                <div className="card">
-                  <div className="flex items-center gap-2 mb-4">
-                    <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                    <h3 className="text-base font-semibold text-surface-900">Rejected Tasks</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {(quests?.rejected ?? []).map((quest) => (
-                      <div
-                        key={quest.questId}
-                        className="rounded-xl border border-red-100 bg-red-50/50 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-semibold text-surface-900">{quest.title}</h4>
-                            {quest.description && (
-                              <p className="mt-1 text-xs text-surface-500 line-clamp-2">{quest.description}</p>
-                            )}
-                            {quest.rejectionReason && (
-                              <p className="mt-2 text-xs text-red-600">
-                                <span className="font-medium">Reason:</span> {quest.rejectionReason}
-                              </p>
-                            )}
-                          </div>
-                          {canResubmitTask(quest, currentMember?.memberId ?? '') && (
-                            <button
-                              type="button"
-                              onClick={() => setResubmitQuest(quest)}
-                              className="flex-shrink-0 rounded-lg border border-madrid-200 bg-madrid-50 px-3 py-1.5 text-xs font-medium text-madrid-700 transition-colors hover:bg-madrid-100"
-                              aria-label={`Resubmit task: ${quest.title}`}
-                            >
-                              Resubmit
-                            </button>
+            {/* Rejected Tasks */}
+            {(quests?.rejected ?? []).length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-[#ffb4ab] text-xl">cancel</span>
+                  <h3 className="font-headline text-base font-bold text-[#e5e1e4]">Rejected Tasks</h3>
+                </div>
+                <div className="space-y-3">
+                  {(quests?.rejected ?? []).map((quest) => (
+                    <div
+                      key={quest.questId}
+                      className="rounded-xl border border-red-900/40 bg-red-900/10 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-[#e5e1e4]">{quest.title}</h4>
+                          {quest.description && (
+                            <p className="mt-1 text-xs text-[#bbc9cf] line-clamp-2">{quest.description}</p>
+                          )}
+                          {quest.rejectionReason && (
+                            <p className="mt-2 text-xs text-[#ffb4ab]">
+                              <span className="font-medium">Reason:</span> {quest.rejectionReason}
+                            </p>
                           )}
                         </div>
+                        {canResubmitTask(quest, currentMember?.memberId ?? '') && (
+                          <button
+                            type="button"
+                            onClick={() => setResubmitQuest(quest)}
+                            className="flex-shrink-0 rounded-lg border border-[rgba(0,212,255,0.4)] bg-[#003642] px-3 py-1.5 text-xs font-medium text-[#3cd7ff] transition-colors hover:shadow-glow hover:border-[#3cd7ff]"
+                            aria-label={`Resubmit task: ${quest.title}`}
+                          >
+                            Resubmit
+                          </button>
+                        )}
                       </div>
-                    ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Propose Task promo card */}
+            <div className="mt-auto glass-panel p-5 rounded-xl border border-[rgba(0,212,255,0.3)] bg-gradient-to-br from-[#003642]/40 to-transparent shadow-[0_0_20px_rgba(0,212,255,0.1)]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-[#3cd7ff] text-xl">add_circle</span>
+                <h4 className="font-headline text-sm font-bold text-[#e5e1e4]">Propose a Quest</h4>
+              </div>
+              <p className="text-xs text-[#bbc9cf] mb-4">
+                Have an idea? Submit a task proposal for Scrum Master review.
+              </p>
+              <ProposeTaskForm onSubmit={handlePropose} />
+            </div>
+          </aside>
+
+          {/* Mission Control: Bulk Review Modal */}
+          {showAllPendingModal && createPortal(
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 md:p-8"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mission-control-title"
+            >
+              {/* Click backdrop to close */}
+              <div
+                className="absolute inset-0"
+                onClick={() => setShowAllPendingModal(false)}
+                aria-hidden="true"
+              />
+
+              {/* Modal container */}
+              <div className="relative w-full max-w-5xl h-[85vh] bg-[#0e0e10] border border-[rgba(168,232,255,0.2)] flex flex-col overflow-hidden shadow-2xl">
+                {/* Corner accents */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#3cd7ff]" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#3cd7ff]" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#3cd7ff]" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#3cd7ff]" />
+
+                {/* Header */}
+                <div className="p-6 md:p-8 pb-4 border-b border-[rgba(168,232,255,0.1)]">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 id="mission-control-title" className="font-headline text-[32px] md:text-[48px] font-bold text-[#3cd7ff] leading-tight tracking-tight">
+                        Mission Control: Bulk Review
+                      </h2>
+                      <p className="mt-2 font-mono text-sm text-[#859398]">
+                        Initialize final protocols for pending quest proposals...
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPendingModal(false)}
+                      className="p-2 text-[#859398] hover:text-[#3cd7ff] transition-colors"
+                      aria-label="Close"
+                    >
+                      <span className="material-symbols-outlined text-2xl">close</span>
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
+
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
+                  {pendingTasks.map((quest) => (
+                    <div
+                      key={quest.questId}
+                      className="flex flex-col md:flex-row items-stretch md:items-center gap-4 bg-[#201f21] border border-[#3c494e]/30 hover:border-[rgba(0,212,255,0.4)] p-5 rounded-lg transition-colors"
+                    >
+                      {/* Left: avatar + info */}
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
+                        {/* Avatar placeholder */}
+                        <div className="w-12 h-12 flex-shrink-0 rounded bg-[#3c494e]/30 border border-[#3c494e]/50 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[#859398] text-xl">person</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-headline text-base font-bold text-white leading-tight">
+                            {quest.title}
+                          </h4>
+                          {quest.description && (
+                            <p className="mt-1 text-sm text-[#859398] line-clamp-2">
+                              {quest.description}
+                            </p>
+                          )}
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-[#3cd7ff]">
+                              @{quest.proposerId === currentMember?.memberId ? currentMember?.displayName : (quest.proposerId ?? 'Unknown')}
+                            </span>
+                            <span className="w-1 h-1 bg-[#3c494e] rounded-full"></span>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#bbc9cf] border border-[#3c494e]/50 bg-[#201f21] px-1.5 py-0.5">
+                              {(quest.difficulty ?? 'easy').toUpperCase()}
+                            </span>
+                            <span className="w-1 h-1 bg-[#3c494e] rounded-full"></span>
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#bbc9cf] border border-[#3c494e]/50 bg-[#201f21] px-1.5 py-0.5">
+                              Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle: difficulty */}
+                      <div className="flex flex-col items-center justify-center px-4 md:border-l md:border-r border-[#3c494e]/30 min-w-[100px]">
+                        <span className="font-mono text-[10px] text-[#859398] uppercase tracking-wider">
+                          Difficulty
+                        </span>
+                        <span className="font-headline text-lg font-bold text-[#3cd7ff] mt-0.5">
+                          {quest.difficulty ?? 'N/A'}
+                        </span>
+                      </div>
+
+                      {/* Right: action buttons */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleReject(quest.questId, 'Rejected via bulk review')}
+                          className="px-4 py-2 text-sm font-mono uppercase tracking-wider rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#ffb4ab] hover:text-[#ffb4ab] transition-colors"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(quest.questId)}
+                          className="px-4 py-2 text-sm font-mono uppercase tracking-wider rounded bg-[rgba(0,212,255,0.2)] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.3)] hover:shadow-[0_0_12px_rgba(0,212,255,0.3)] transition-all"
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div className="border-t border-[rgba(168,232,255,0.1)] p-4 md:px-8 flex items-center">
+                  <div className="inline-flex items-center gap-2 bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.3)] px-4 py-2 rounded-full">
+                    {/* Pulsing dot */}
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3cd7ff] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3cd7ff]"></span>
+                    </span>
+                    <span className="font-mono text-xs text-[#3cd7ff] uppercase tracking-wider">
+                      {pendingTasks.length} Pending Actions
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
+
+          {/* Review Detail Modal (triggered from inline Review button) */}
+          {reviewingQuestId && (() => {
+            const quest = pendingTasks.find((q) => q.questId === reviewingQuestId);
+            if (!quest) return null;
+            return createPortal(
+              <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="review-detail-title"
+              >
+                <div
+                  className="absolute inset-0"
+                  onClick={() => setReviewingQuestId(null)}
+                  aria-hidden="true"
+                />
+                <div className="relative w-full max-w-md bg-[#0e0e10] border border-[rgba(168,232,255,0.2)] p-6 shadow-2xl rounded-lg">
+                  {/* Close */}
+                  <button
+                    type="button"
+                    onClick={() => setReviewingQuestId(null)}
+                    className="absolute right-4 top-4 text-[#859398] hover:text-[#3cd7ff] transition-colors"
+                    aria-label="Close"
+                  >
+                    <span className="material-symbols-outlined text-xl">close</span>
+                  </button>
+
+                  <h3 id="review-detail-title" className="font-headline text-lg font-bold text-[#e5e1e4] mb-1">
+                    Review Task Proposal
+                  </h3>
+                  <p className="text-sm text-[#859398] mb-5">Approve or reject this proposed task.</p>
+
+                  {/* Task details */}
+                  <div className="bg-[#201f21] border border-[#3c494e]/30 rounded-lg p-4 mb-5">
+                    <h4 className="text-sm font-bold text-white">{quest.title}</h4>
+                    {quest.description && (
+                      <p className="mt-1.5 text-sm text-[#859398]">{quest.description}</p>
+                    )}
+                    <p className="mt-2 text-xs text-[#bbc9cf]">
+                      Proposed by: {quest.proposerId === currentMember?.memberId ? currentMember?.displayName : (quest.proposerId ?? 'Unknown')}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleApprove(quest.questId);
+                        setReviewingQuestId(null);
+                      }}
+                      className="flex-1 py-2.5 rounded bg-[rgba(0,212,255,0.2)] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)] font-mono text-sm uppercase tracking-wider hover:bg-[rgba(0,212,255,0.3)] transition-colors"
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleReject(quest.questId, 'Rejected via review');
+                        setReviewingQuestId(null);
+                      }}
+                      className="flex-1 py-2.5 rounded border border-[#3c494e] text-[#ffb4ab] font-mono text-sm uppercase tracking-wider hover:border-[#ffb4ab] transition-colors"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            );
+          })()}
 
           {/* Resubmit Task Modal */}
           {resubmitQuest && (

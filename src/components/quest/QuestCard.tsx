@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Quest } from '../../types';
 import { canCompleteQuest } from '../../utils/permissions';
 
@@ -10,95 +9,137 @@ interface QuestCardProps {
 }
 
 export function QuestCard({ quest, onComplete, disabled, completed }: QuestCardProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
   const isCompletable = canCompleteQuest(quest) && !disabled && !completed;
 
-  const tooltipMessage =
-    quest.status === 'pending'
-      ? 'This task requires Scrum Master approval before completion'
-      : quest.status === 'rejected'
-        ? 'This task has been rejected and cannot be completed'
-        : completed
-          ? 'Quest already completed'
-          : undefined;
-
-  function handleChange() {
+  function handleAction() {
     if (isCompletable) {
       onComplete(quest.questId);
     }
   }
 
+  // Rarity badge color mapping based on difficulty
+  const getRarityStyle = () => {
+    const diff = quest.difficulty ?? 'easy';
+    if (diff === 'hard') {
+      return 'bg-[#003642]/60 text-[#3cd7ff] border border-[rgba(0,212,255,0.4)]';
+    }
+    if (diff === 'medium') {
+      return 'bg-[#47475d]/20 text-[#c6c4df] border border-[#c6c4df]/30';
+    }
+    return 'bg-[#2a2a2c] text-[#859398] border border-[#3c494e]';
+  };
+
+  const getRarityLabel = () => {
+    const diff = (quest.difficulty ?? 'easy').toUpperCase();
+    return diff;
+  };
+
+  const getCoinReward = () => {
+    const diff = quest.difficulty ?? 'easy';
+    if (diff === 'hard') return 3;
+    if (diff === 'medium') return 2;
+    return 1;
+  };
+
+  // Action button label
+  const getActionLabel = () => {
+    if (completed) return 'Done';
+    if (quest.assignmentType === 'open') return 'Support';
+    return 'Done';
+  };
+
+  // Progress percentage based on completion state
+  const progressPercent = completed ? 100 : 0;
+
   return (
     <div
-      className={`group relative flex items-start gap-3 rounded-xl border bg-white p-4 transition-all ${completed
-          ? 'border-madrid-200 bg-madrid-50/50 opacity-75'
-          : 'border-surface-200 hover:border-madrid-200 hover:shadow-card-hover'
+      className={`group relative glass-panel glow-border p-6 rounded-xl transition-all ${completed
+        ? 'opacity-60 border-[rgba(0,212,255,0.05)]'
+        : 'border-[rgba(0,212,255,0.1)]'
         }`}
     >
-      {/* Checkbox */}
-      <div className="relative flex-shrink-0 pt-0.5">
-        <input
-          type="checkbox"
-          id={`quest-${quest.questId}`}
-          checked={completed}
-          disabled={!isCompletable}
-          onChange={handleChange}
-          className="h-5 w-5 rounded border-surface-300 text-madrid-600 focus:ring-madrid-500 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label={`Complete quest: ${quest.title}`}
-          onMouseEnter={() => !isCompletable && setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
-          onFocus={() => !isCompletable && setShowTooltip(true)}
-          onBlur={() => setShowTooltip(false)}
-        />
-        {showTooltip && tooltipMessage && (
-          <div
-            role="tooltip"
-            className="absolute bottom-full left-1/2 z-10 mb-2 w-52 -translate-x-1/2 rounded-lg bg-surface-900 px-3 py-2 text-xs text-white shadow-elevated"
-          >
-            {tooltipMessage}
-            <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-surface-900" />
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        {/* Left side — content */}
+        <div className="flex-1 min-w-0">
+          {/* Rarity badge + project label row */}
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <span className={`label-mono inline-block rounded px-2.5 py-0.5 text-[10px] font-bold ${getRarityStyle()}`}>
+              {getRarityLabel()}
+            </span>
+            {quest.projectIds.length > 0 && (
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded">
+                Project: {quest.projectIds.join(', ')}
+              </span>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Content */}
-      <label
-        htmlFor={`quest-${quest.questId}`}
-        className={`flex-1 min-w-0 ${!isCompletable ? 'opacity-60' : 'cursor-pointer'}`}
-      >
-        <h4 className={`text-sm font-medium ${completed ? 'text-surface-500 line-through' : 'text-surface-900'}`}>
-          {quest.title}
-        </h4>
-        {quest.description && (
-          <p className="mt-0.5 text-xs text-surface-500 line-clamp-2">{quest.description}</p>
-        )}
-      </label>
+          {/* Title */}
+          <h4 className={`text-base font-bold font-headline ${completed ? 'text-[#859398] line-through' : 'text-[#e5e1e4]'}`}>
+            {quest.title}
+          </h4>
 
-      {/* Status badges */}
-      <div className="flex-shrink-0">
-        {quest.status === 'pending' && (
-          <span className="badge-pill bg-amber-100 text-amber-800">Pending</span>
-        )}
-        {quest.status === 'rejected' && (
-          <span className="badge-pill bg-red-100 text-red-800">Rejected</span>
-        )}
-        {quest.assignmentType === 'open' && quest.status === 'active' && (
-          <span className="badge-pill bg-blue-100 text-blue-800">
-            {quest.completionMode === 'first-claim' ? '🏁 First Claim' : '👥 Open'}
-          </span>
-        )}
-        {quest.assignmentType === 'assigned' && quest.status === 'active' && !completed && (
-          <span className="badge-pill bg-purple-100 text-purple-800">Assigned</span>
-        )}
-        {completed && quest.status === 'active' && (
-          <span className="badge-pill bg-madrid-100 text-madrid-800">
-            <svg className="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-            </svg>
-            Done
-          </span>
-        )}
+          {/* Description */}
+          {quest.description && (
+            <p className="mt-1.5 text-sm text-[#bbc9cf] line-clamp-2">{quest.description}</p>
+          )}
+
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#2a2a2c]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#00d4ff] to-[#3cd7ff] transition-all duration-500"
+                style={{
+                  width: `${progressPercent}%`,
+                  boxShadow: progressPercent > 0 ? '0 0 8px rgba(60, 215, 255, 0.5), 0 0 16px rgba(60, 215, 255, 0.2)' : 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Progress % + EXP row */}
+          <div className="mt-2 flex items-center justify-between">
+            <span className="label-mono text-[#859398]">
+              {progressPercent}% complete
+            </span>
+            <span className="label-mono text-[#3cd7ff]">
+              +{getCoinReward()} Coin{getCoinReward() > 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+
+        {/* Right side — avatars + action */}
+        <div className="flex-shrink-0 flex items-center gap-3 md:flex-col md:items-end md:gap-3">
+          {/* Avatar stack */}
+          <div className="flex -space-x-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#003642] border-2 border-[#131315] text-[10px] font-bold text-[#3cd7ff]">
+              <span className="material-symbols-outlined text-sm">person</span>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a2a2c] border-2 border-[#131315] text-[10px] font-bold text-[#859398]">
+              <span className="material-symbols-outlined text-sm">group</span>
+            </div>
+          </div>
+
+          {/* Action button or Done badge */}
+          {completed ? (
+            <span className="badge-pill bg-[#003642] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)]">
+              <span className="material-symbols-outlined text-xs mr-1">check_circle</span>
+              Done
+            </span>
+          ) : quest.status === 'pending' ? (
+            <span className="badge-pill bg-amber-900/40 text-amber-300 border border-amber-500/30">Pending</span>
+          ) : quest.status === 'rejected' ? (
+            <span className="badge-pill bg-red-900/40 text-red-300 border border-red-500/30">Rejected</span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAction}
+              disabled={!isCompletable}
+              className="rounded-lg bg-[#003642] border border-[rgba(0,212,255,0.4)] px-4 py-2 text-xs font-bold text-[#3cd7ff] uppercase tracking-wider transition-all hover:shadow-glow hover:border-[#3cd7ff] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {getActionLabel()}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

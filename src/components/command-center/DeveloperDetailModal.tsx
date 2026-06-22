@@ -16,16 +16,16 @@ export interface DeveloperDetailModalProps {
 // ─── Status Badge Helper ────────────────────────────────────────────────────
 
 function getStatusBadgeClasses(status: DeveloperTaskDetail['status'], isCompleted: boolean): string {
-    if (isCompleted) return 'bg-green-100 text-green-700';
+    if (isCompleted) return 'bg-green-900/30 text-green-400';
     switch (status) {
         case 'active':
-            return 'bg-green-100 text-green-700';
+            return 'bg-green-900/30 text-green-400';
         case 'pending':
-            return 'bg-yellow-100 text-yellow-700';
+            return 'bg-yellow-900/30 text-yellow-400';
         case 'rejected':
-            return 'bg-red-100 text-red-700';
+            return 'bg-red-900/30 text-red-400';
         default:
-            return 'bg-surface-100 text-surface-600';
+            return 'bg-[#2a2a2c] text-[#bbc9cf]';
     }
 }
 
@@ -156,7 +156,7 @@ export function DeveloperDetailModal({
         >
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -164,60 +164,62 @@ export function DeveloperDetailModal({
             {/* Modal content */}
             <div
                 ref={modalRef}
-                className="relative my-8 w-full max-w-3xl rounded-2xl border border-surface-200 bg-white shadow-elevated animate-fade-slide-up"
+                className="relative my-8 w-full max-w-3xl rounded-2xl border border-[rgba(0,212,255,0.2)] bg-[#0e0e10] shadow-[0_0_30px_rgba(0,212,255,0.1)] animate-fade-slide-up"
             >
-                {/* Close button */}
-                <button
-                    ref={closeButtonRef}
-                    type="button"
-                    onClick={onClose}
-                    className="absolute right-4 top-4 z-10 rounded-md p-1.5 text-surface-400 hover:text-surface-600 focus:outline-none focus:ring-2 focus:ring-madrid-500"
-                    aria-label="Close modal"
-                >
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                    </svg>
-                </button>
+                {/* Close button — in its own row above content to avoid overlap */}
+                <div className="flex justify-end px-4 pt-4">
+                    <button
+                        ref={closeButtonRef}
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-md p-1.5 text-[#859398] hover:text-[#e5e1e4] focus:outline-none focus:ring-2 focus:ring-[#00d4ff]"
+                        aria-label="Close modal"
+                    >
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                        </svg>
+                    </button>
+                </div>
 
                 {/* Loading state */}
                 {loading && (
                     <div className="flex items-center justify-center py-16">
                         <div className="flex flex-col items-center gap-3">
-                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-madrid-200 border-t-madrid-600" />
-                            <p className="text-sm text-surface-500">Loading developer details...</p>
+                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[rgba(0,212,255,0.3)] border-t-[#00d4ff]" />
+                            <p className="text-sm text-[#859398]">Loading developer details...</p>
                         </div>
                     </div>
                 )}
 
                 {/* Content */}
                 {!loading && detail && (
-                    <div className="p-6">
+                    <div className="px-6 pb-6">
                         {/* Header: Developer name, role, overall progress */}
-                        <header className="mb-6 border-b border-surface-100 pb-5">
+                        <header className="mb-6 border-b border-[#3c494e]/50 pb-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-madrid-100 text-lg font-bold text-madrid-700">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[rgba(0,212,255,0.15)] text-lg font-bold text-[#3cd7ff]">
                                     {detail.member.displayName.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 id="developer-detail-title" className="text-lg font-semibold text-surface-900 truncate">
+                                    <h2 id="developer-detail-title" className="text-lg font-semibold text-[#e5e1e4] truncate">
                                         {detail.member.displayName}
                                     </h2>
-                                    <p className="text-sm capitalize text-surface-500">{detail.member.primaryRole}</p>
+                                    <p className="text-sm capitalize text-[#859398]">{detail.member.primaryRole}</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-2xl font-bold text-madrid-600">{detail.completionPercentage}%</span>
-                                    <p className="text-xs text-surface-500">complete</p>
+                                    <span className="text-2xl font-bold text-[#00d4ff]">{detail.completionPercentage}%</span>
+                                    <p className="text-xs text-[#859398]">complete</p>
                                 </div>
                             </div>
 
                             {/* Progress bar */}
                             <div className="mt-4">
-                                <div className="flex items-center justify-between text-xs text-surface-500 mb-1.5">
+                                <div className="flex items-center justify-between text-xs text-[#859398] mb-1.5">
                                     <span>{detail.completionCount} / {detail.totalTasks} tasks completed</span>
                                 </div>
-                                <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-100">
+                                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#2a2a2c]">
                                     <div
-                                        className="h-full rounded-full bg-gradient-to-r from-madrid-500 to-madrid-600 transition-all duration-300"
+                                        className="h-full rounded-full bg-gradient-to-r from-[#00d4ff] to-[#00d4ff] transition-all duration-300"
                                         style={{ width: `${detail.completionPercentage}%` }}
                                         role="progressbar"
                                         aria-valuenow={detail.completionPercentage}
@@ -231,33 +233,33 @@ export function DeveloperDetailModal({
 
                         {/* Task List Section */}
                         <section className="mb-6">
-                            <h3 className="mb-3 text-sm font-semibold text-surface-900">All Tasks</h3>
+                            <h3 className="mb-3 text-sm font-semibold text-[#e5e1e4]">All Tasks</h3>
                             {detail.tasks.length === 0 ? (
-                                <p className="text-sm text-surface-400 italic">No tasks assigned</p>
+                                <p className="text-sm text-[#859398] italic">No tasks assigned</p>
                             ) : (
-                                <div className="max-h-64 overflow-y-auto rounded-xl border border-surface-100">
+                                <div className="max-h-64 overflow-y-auto rounded-xl border border-[#3c494e]/50">
                                     <table className="w-full text-sm" role="table" aria-label="Developer task list">
                                         <thead>
-                                            <tr className="border-b border-surface-100 bg-surface-50">
-                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-surface-500">Task</th>
-                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-surface-500">Status</th>
-                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-surface-500">Category</th>
-                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-surface-500">Date</th>
+                                            <tr className="border-b border-[#3c494e]/50 bg-[#1c1b1d]">
+                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[#859398]">Task</th>
+                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[#859398]">Status</th>
+                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[#859398]">Category</th>
+                                                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[#859398]">Date</th>
                                                 {(onApprove || onReject) && (
-                                                    <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-surface-500">Actions</th>
+                                                    <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[#859398]">Actions</th>
                                                 )}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-surface-100">
+                                        <tbody className="divide-y divide-[#3c494e]/50">
                                             {detail.tasks.map((task) => {
                                                 const isCompleted = task.completedAt !== null;
                                                 const isPending = task.status === 'pending' && !isCompleted;
                                                 const isRejectingThis = rejectingQuestId === task.questId;
 
                                                 return (
-                                                    <tr key={task.questId} className="transition-colors hover:bg-surface-50">
+                                                    <tr key={task.questId} className="transition-colors hover:bg-[#201f21]">
                                                         <td className="px-4 py-3">
-                                                            <span className="font-medium text-surface-900">{task.title}</span>
+                                                            <span className="font-medium text-[#e5e1e4]">{task.title}</span>
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClasses(task.status, isCompleted)}`}>
@@ -265,9 +267,9 @@ export function DeveloperDetailModal({
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3">
-                                                            <span className="capitalize text-surface-600">{task.category}</span>
+                                                            <span className="capitalize text-[#bbc9cf]">{task.category}</span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-surface-500">
+                                                        <td className="px-4 py-3 text-[#859398]">
                                                             {isCompleted
                                                                 ? formatDate(task.completedAt)
                                                                 : formatDate(task.createdAt)}
@@ -280,7 +282,7 @@ export function DeveloperDetailModal({
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => handleApprove(task.questId)}
-                                                                                className="rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
+                                                                                className="rounded-md bg-[rgba(34,197,94,0.1)] px-2.5 py-1 text-xs font-medium text-green-400 transition-colors hover:bg-green-900/30"
                                                                                 aria-label={`Approve task: ${task.title}`}
                                                                             >
                                                                                 Approve
@@ -290,7 +292,7 @@ export function DeveloperDetailModal({
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => handleRejectStart(task.questId)}
-                                                                                className="rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 transition-colors hover:bg-red-100"
+                                                                                className="rounded-md bg-[rgba(239,68,68,0.1)] px-2.5 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-900/30"
                                                                                 aria-label={`Reject task: ${task.title}`}
                                                                             >
                                                                                 Reject
@@ -306,7 +308,7 @@ export function DeveloperDetailModal({
                                                                             onChange={(e) => setRejectReason(e.target.value)}
                                                                             placeholder="Reason..."
                                                                             maxLength={250}
-                                                                            className="w-28 rounded-md border border-surface-200 px-2 py-1 text-xs text-surface-900 placeholder-surface-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                                                            className="w-28 rounded-md border border-[#3c494e] bg-[#1c1b1d] px-2 py-1 text-xs text-[#e5e1e4] placeholder-[#859398] focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400"
                                                                             aria-label="Rejection reason"
                                                                             autoFocus
                                                                             onKeyDown={(e) => {
@@ -326,7 +328,7 @@ export function DeveloperDetailModal({
                                                                         <button
                                                                             type="button"
                                                                             onClick={handleRejectCancel}
-                                                                            className="rounded-md bg-surface-100 px-2 py-1 text-xs font-medium text-surface-600 transition-colors hover:bg-surface-200"
+                                                                            className="rounded-md bg-[#2a2a2c] px-2 py-1 text-xs font-medium text-[#bbc9cf] transition-colors hover:bg-[#2a2a2c]"
                                                                             aria-label="Cancel rejection"
                                                                         >
                                                                             ✕
@@ -346,25 +348,25 @@ export function DeveloperDetailModal({
 
                         {/* Completion History */}
                         <section className="mb-6">
-                            <h3 className="mb-3 text-sm font-semibold text-surface-900">Completion History</h3>
+                            <h3 className="mb-3 text-sm font-semibold text-[#e5e1e4]">Completion History</h3>
                             {completionHistory.length === 0 ? (
-                                <p className="text-sm text-surface-400 italic">No completed tasks yet</p>
+                                <p className="text-sm text-[#859398] italic">No completed tasks yet</p>
                             ) : (
                                 <div className="max-h-48 overflow-y-auto space-y-2">
                                     {completionHistory.map((task) => (
                                         <div
                                             key={`history-${task.questId}`}
-                                            className="flex items-center justify-between rounded-lg border border-surface-100 bg-surface-50 px-4 py-2.5"
+                                            className="flex items-center justify-between rounded-lg border border-[#3c494e]/50 bg-[#1c1b1d] px-4 py-2.5"
                                         >
                                             <div className="flex items-center gap-2.5">
-                                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600">
+                                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-900/30 text-green-400">
                                                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                                     </svg>
                                                 </span>
-                                                <span className="text-sm font-medium text-surface-800">{task.title}</span>
+                                                <span className="text-sm font-medium text-[#e5e1e4]">{task.title}</span>
                                             </div>
-                                            <span className="text-xs text-surface-500">{formatDate(task.completedAt)}</span>
+                                            <span className="text-xs text-[#859398]">{formatDate(task.completedAt)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -373,22 +375,22 @@ export function DeveloperDetailModal({
 
                         {/* Badge Progress */}
                         <section>
-                            <h3 className="mb-3 text-sm font-semibold text-surface-900">Badge Progress</h3>
+                            <h3 className="mb-3 text-sm font-semibold text-[#e5e1e4]">Badge Progress</h3>
                             {badgeData ? (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm text-surface-600">
+                                        <span className="text-sm text-[#bbc9cf]">
                                             {badgeData.earnedCount} / {badgeData.totalCount} badges earned
                                         </span>
-                                        <span className="text-sm font-medium text-madrid-600">
+                                        <span className="text-sm font-medium text-[#00d4ff]">
                                             {badgeData.totalCount > 0
                                                 ? Math.round((badgeData.earnedCount / badgeData.totalCount) * 100)
                                                 : 0}%
                                         </span>
                                     </div>
-                                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-100">
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-[#2a2a2c]">
                                         <div
-                                            className="h-full rounded-full bg-madrid-500 transition-all duration-300"
+                                            className="h-full rounded-full bg-[#00d4ff] transition-all duration-300"
                                             style={{
                                                 width: `${badgeData.totalCount > 0 ? (badgeData.earnedCount / badgeData.totalCount) * 100 : 0}%`,
                                             }}
@@ -406,8 +408,8 @@ export function DeveloperDetailModal({
                                                 <span
                                                     key={badge.badgeId}
                                                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${earned
-                                                            ? 'bg-madrid-100 text-madrid-700'
-                                                            : 'bg-surface-100 text-surface-400'
+                                                        ? 'bg-[rgba(0,212,255,0.15)] text-[#3cd7ff]'
+                                                        : 'bg-[#2a2a2c] text-[#859398]'
                                                         }`}
                                                     title={earned ? `Earned: ${badge.name}` : `Locked: ${badge.description}`}
                                                 >
@@ -419,7 +421,7 @@ export function DeveloperDetailModal({
                                     )}
                                 </div>
                             ) : (
-                                <p className="text-sm text-surface-400 italic">Badge data unavailable</p>
+                                <p className="text-sm text-[#859398] italic">Badge data unavailable</p>
                             )}
                         </section>
                     </div>

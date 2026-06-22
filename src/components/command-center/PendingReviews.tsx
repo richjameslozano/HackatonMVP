@@ -40,12 +40,12 @@ export function PendingReviews({ pendingTasks, onTaskClick, onViewAll }: Pending
     const count = pendingTasks.length;
 
     return (
-        <div className="rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
+        <div className="p-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-surface-900">Pending Reviews</h3>
+                <h3 className="text-sm font-semibold text-[#e5e1e4]">Pending Reviews</h3>
                 {count > 0 && (
-                    <span className="inline-flex items-center rounded-full bg-madrid-100 px-2 py-0.5 text-[11px] font-semibold text-madrid-700">
+                    <span className="inline-flex items-center rounded-full bg-[rgba(0,212,255,0.1)] px-2 py-0.5 text-[11px] font-semibold text-[#00d4ff]">
                         {count} NEW
                     </span>
                 )}
@@ -64,7 +64,7 @@ export function PendingReviews({ pendingTasks, onTaskClick, onViewAll }: Pending
                     >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-sm text-surface-500">No pending reviews</p>
+                    <p className="text-sm text-[#859398]">No pending reviews</p>
                 </div>
             ) : (
                 <ul className="space-y-2" role="list">
@@ -73,13 +73,13 @@ export function PendingReviews({ pendingTasks, onTaskClick, onViewAll }: Pending
                             <button
                                 type="button"
                                 onClick={() => onTaskClick?.(task.questId)}
-                                className="w-full rounded-lg border border-surface-100 bg-surface-50 px-3 py-2 text-left transition-colors hover:bg-surface-100 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-1"
+                                className="w-full rounded-lg border border-[#3c494e]/50 bg-[#1c1b1d] px-3 py-2 text-left transition-colors hover:bg-[#2a2a2c] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-1"
                                 aria-label={`Review task: ${task.title}`}
                             >
-                                <p className="text-sm font-medium text-surface-900 truncate">{task.title}</p>
+                                <p className="text-sm font-medium text-[#e5e1e4] truncate">{task.title}</p>
                                 <div className="mt-0.5 flex items-center justify-between">
-                                    <span className="text-xs text-surface-500 truncate">{task.proposerName}</span>
-                                    <span className="text-xs text-surface-400 flex-shrink-0 ml-2">
+                                    <span className="text-xs text-[#859398] truncate">{task.proposerName}</span>
+                                    <span className="text-xs text-[#859398] flex-shrink-0 ml-2">
                                         {formatRelativeTime(task.createdAt)}
                                     </span>
                                 </div>
@@ -94,7 +94,7 @@ export function PendingReviews({ pendingTasks, onTaskClick, onViewAll }: Pending
                 <button
                     type="button"
                     onClick={() => onViewAll?.()}
-                    className="mt-3 w-full text-center text-xs font-medium text-madrid-600 hover:text-madrid-700 transition-colors focus:outline-none focus:underline"
+                    className="mt-3 w-full text-center text-xs font-medium text-[#3cd7ff] hover:text-[#00d4ff] transition-colors focus:outline-none focus:underline"
                 >
                     View All Reviews{count > MAX_DISPLAY_ITEMS ? ` (${count})` : ''}
                 </button>

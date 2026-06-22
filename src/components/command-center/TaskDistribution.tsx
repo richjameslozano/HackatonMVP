@@ -16,16 +16,16 @@ export function TaskDistributionChart({ distribution }: TaskDistributionChartPro
 
     if (!hasData) {
         return (
-            <div className="rounded-lg border border-surface-200 bg-white p-4">
-                <h3 className="text-sm font-semibold text-surface-700 mb-3">Task Distribution</h3>
-                <p className="text-xs text-surface-400 text-center py-4">No tasks tracked yet</p>
+            <div className="p-4">
+                <h3 className="text-sm font-semibold text-[#bbc9cf] mb-3">Task Distribution</h3>
+                <p className="text-xs text-[#859398] text-center py-4">No tasks tracked yet</p>
             </div>
         );
     }
 
     return (
-        <div className="rounded-lg border border-surface-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-surface-700 mb-3">Task Distribution</h3>
+        <div className="p-4">
+            <h3 className="text-sm font-semibold text-[#bbc9cf] mb-3">Task Distribution</h3>
 
             {/* Stacked horizontal bar */}
             <div
@@ -56,7 +56,7 @@ export function TaskDistributionChart({ distribution }: TaskDistributionChartPro
                 {STATUS_CONFIG.map(({ key, label, color }) => (
                     <div key={key} className="flex items-center gap-1.5">
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
-                        <span className="text-xs text-surface-600">
+                        <span className="text-xs text-[#bbc9cf]">
                             {label} <span className="font-semibold">{distribution[key]}%</span>
                         </span>
                     </div>

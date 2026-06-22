@@ -92,36 +92,36 @@ export function BlockersPanel({
     const hasIssues = highPriority.length > 0 || inactivity.length > 0;
 
     return (
-        <div className="rounded-xl border border-surface-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-surface-900">Blockers & Risks</h3>
+        <div className="p-4">
+            <h3 className="text-sm font-semibold text-[#e5e1e4]">Blockers & Risks</h3>
 
             {!hasIssues && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2.5">
-                    <span className="text-green-600" aria-hidden="true">✓</span>
-                    <p className="text-sm text-green-700 font-medium">All clear — no blockers or risks</p>
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-[rgba(34,197,94,0.1)] px-3 py-2.5">
+                    <span className="text-green-400" aria-hidden="true">✓</span>
+                    <p className="text-sm text-green-400 font-medium">All clear — no blockers or risks</p>
                 </div>
             )}
 
             {highPriority.length > 0 && (
                 <div className="mt-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-red-600 mb-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-red-400 mb-2">
                         High Priority
                     </h4>
                     <ul className="space-y-2" aria-label="High priority blockers">
                         {highPriority.map((entry) => (
                             <li
                                 key={entry.developerId}
-                                className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2"
+                                className="flex items-start gap-2 rounded-lg border border-red-800/30 bg-[rgba(239,68,68,0.1)] px-3 py-2"
                             >
                                 <span
                                     className="mt-0.5 h-2 w-2 flex-shrink-0 rounded-full bg-red-500"
                                     aria-hidden="true"
                                 />
                                 <div className="min-w-0">
-                                    <p className="text-sm font-medium text-surface-900 truncate">
+                                    <p className="text-sm font-medium text-[#e5e1e4] truncate">
                                         {entry.developerName}
                                     </p>
-                                    <p className="text-xs text-red-600">{entry.description}</p>
+                                    <p className="text-xs text-red-400">{entry.description}</p>
                                 </div>
                             </li>
                         ))}
@@ -131,24 +131,24 @@ export function BlockersPanel({
 
             {inactivity.length > 0 && (
                 <div className="mt-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-400 mb-2">
                         Inactivity
                     </h4>
                     <ul className="space-y-2" aria-label="Inactivity risks">
                         {inactivity.map((entry) => (
                             <li
                                 key={entry.developerId}
-                                className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2"
+                                className="flex items-start gap-2 rounded-lg border border-amber-800/30 bg-[rgba(245,158,11,0.1)] px-3 py-2"
                             >
                                 <span
                                     className="mt-0.5 h-2 w-2 flex-shrink-0 rounded-full bg-amber-500"
                                     aria-hidden="true"
                                 />
                                 <div className="min-w-0">
-                                    <p className="text-sm font-medium text-surface-900 truncate">
+                                    <p className="text-sm font-medium text-[#e5e1e4] truncate">
                                         {entry.developerName}
                                     </p>
-                                    <p className="text-xs text-amber-600">{entry.description}</p>
+                                    <p className="text-xs text-amber-400">{entry.description}</p>
                                 </div>
                             </li>
                         ))}

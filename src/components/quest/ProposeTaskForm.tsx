@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { validateTaskTitle, validateTaskDescription } from '../../utils/validation';
 import { ValidationError } from '../shared';
-import { DifficultySelector } from '../shared/DifficultySelector';
-import type { Difficulty } from '../../types';
+import type { Difficulty, Project } from '../../types';
+import { listProjects } from '../../services/project.service';
 
 interface ProposeTaskFormProps {
   onSubmit: (title: string, description: string, difficulty: Difficulty) => Promise<void>;
 }
+
+const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; coins: number; sublabel: string; colorClass: string }[] = [
+  { value: 'easy', label: 'EASY', coins: 1, sublabel: 'Standard task', colorClass: 'text-[#bbc9cf]' },
+  { value: 'medium', label: 'MEDIUM', coins: 2, sublabel: 'High priority', colorClass: 'text-[#d1bcff]' },
+  { value: 'hard', label: 'HARD', coins: 3, sublabel: 'Critical mission', colorClass: 'text-[#00d4ff]' },
+];
 
 export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
   const [showModal, setShowModal] = useState(false);
@@ -16,10 +23,18 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descTouched, setDescTouched] = useState(false);
+  const [projectId, setProjectId] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const titleValidation = validateTaskTitle(title);
   const descValidation = validateTaskDescription(description);
   const isFormValid = titleValidation.valid && descValidation.valid;
+
+  useEffect(() => {
+    if (showModal) {
+      listProjects().then(setProjects).catch(() => setProjects([]));
+    }
+  }, [showModal]);
 
   function handleOpen() {
     setShowModal(true);
@@ -30,6 +45,7 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     setTitle('');
     setDescription('');
     setDifficulty('easy');
+    setProjectId('');
     setTitleTouched(false);
     setDescTouched(false);
   }
@@ -56,129 +72,194 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
       <button
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-madrid-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2"
+        className="inline-flex items-center gap-1.5 bg-[#00d4ff] px-4 py-2.5 text-sm font-bold text-[#003642] shadow-sm transition-all hover:bg-[#3cd7ff] hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] focus:outline-none active:scale-95"
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
+        <span className="material-symbols-outlined text-lg">add_box</span>
         Propose Task
       </button>
 
-      {/* Modal */}
-      {showModal && (
+      {/* Modal — rendered via portal to escape parent stacking context */}
+      {showModal && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="propose-task-modal-title"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          {/* Backdrop */}
+          {/* Backdrop click to close */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md"
             onClick={handleClose}
             aria-hidden="true"
           />
 
-          {/* Modal content */}
-          <div className="relative w-full max-w-lg rounded-2xl border border-surface-200 bg-white p-6 shadow-elevated animate-fade-slide-up">
-            {/* Close button */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="absolute right-4 top-4 rounded-md p-1 text-surface-400 hover:text-surface-600"
-              aria-label="Close"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
-
-            {/* Header */}
-            <div className="mb-5">
-              <h3 id="propose-task-modal-title" className="text-lg font-semibold text-surface-900">
-                Propose a New Task
-              </h3>
-              <p className="mt-1 text-sm text-surface-500">
-                Submit a sprint task for Scrum Master approval.
-              </p>
+          {/* Modal container */}
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0e0e10] border border-[rgba(0,212,255,0.3)] shadow-[0_0_15px_rgba(0,212,255,0.15),inset_0_0_2px_rgba(0,212,255,0.3)] animate-fade-slide-up">
+            {/* Top-right metadata */}
+            <div className="absolute top-4 right-6 font-mono text-[12px] text-[rgba(60,215,255,0.4)]">
+              SYS_REQ: QUEST_GEN_v4.2
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="modal-task-title" className="block text-sm font-medium text-surface-700">
-                  Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="modal-task-title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={() => setTitleTouched(true)}
-                  maxLength={100}
-                  placeholder="Enter task title"
-                  className="mt-1.5 block w-full rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 text-sm text-surface-900 placeholder-surface-400 focus:border-madrid-500 focus:outline-none focus:ring-1 focus:ring-madrid-500"
-                  aria-describedby="modal-title-error modal-title-count"
-                  aria-invalid={titleTouched && !titleValidation.valid}
-                  autoFocus
-                />
-                <div className="mt-1.5 flex items-center justify-between">
-                  <div id="modal-title-error">
-                    {titleTouched && <ValidationError message={titleValidation.error} />}
-                  </div>
-                  <span id="modal-title-count" className="text-xs text-surface-400">
-                    {title.length}/100
+            {/* Content */}
+            <div className="p-6 md:p-10 space-y-8">
+              {/* Header */}
+              <div className="flex items-center gap-4 border-b border-[#3c494e]/20 pb-6">
+                <div className="flex items-center justify-center w-12 h-12 bg-[rgba(0,212,255,0.1)] border border-[rgba(60,215,255,0.3)]">
+                  <span className="material-symbols-outlined text-[#3cd7ff]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    swords
                   </span>
+                </div>
+                <div>
+                  <h1 id="propose-task-modal-title" className="font-headline text-2xl font-semibold text-[#e5e1e4] tracking-tight flex items-center gap-2">
+                    Propose New Quest
+                    <span className="material-symbols-outlined text-[#3cd7ff] text-lg">diamond</span>
+                  </h1>
+                  <p className="font-mono text-[12px] text-[#bbc9cf] uppercase mt-1">
+                    Initialize direct action protocol
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="modal-task-description" className="block text-sm font-medium text-surface-700">
-                  Description <span className="text-xs text-surface-400">(optional)</span>
-                </label>
-                <textarea
-                  id="modal-task-description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={() => setDescTouched(true)}
-                  maxLength={500}
-                  rows={3}
-                  placeholder="Describe the task in detail..."
-                  className="mt-1.5 block w-full rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 text-sm text-surface-900 placeholder-surface-400 focus:border-madrid-500 focus:outline-none focus:ring-1 focus:ring-madrid-500"
-                  aria-describedby="modal-desc-error modal-desc-count"
-                  aria-invalid={descTouched && !descValidation.valid}
-                />
-                <div className="mt-1.5 flex items-center justify-between">
-                  <div id="modal-desc-error">
-                    {descTouched && <ValidationError message={descValidation.error} />}
-                  </div>
-                  <span id="modal-desc-count" className="text-xs text-surface-400">
-                    {description.length}/500
-                  </span>
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Select Project */}
+                <div className="space-y-2">
+                  <label htmlFor="modal-task-project" className="font-mono text-[12px] text-[#3cd7ff] uppercase flex justify-between">
+                    Select Project
+                    <span className="text-[rgba(187,201,207,0.4)]">Required</span>
+                  </label>
+                  <select
+                    id="modal-task-project"
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-full bg-[#201f21] border-0 border-b border-[#3c494e] focus:border-[#00d4ff] focus:ring-0 text-[#e5e1e4] text-base py-3 px-0 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Choose a project...</option>
+                    {projects.map((p) => (
+                      <option key={p.projectId} value={p.projectId}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <DifficultySelector value={difficulty} onChange={setDifficulty} />
+                {/* Title */}
+                <div className="space-y-2 group">
+                  <label htmlFor="modal-task-title" className="font-mono text-[12px] text-[#3cd7ff] uppercase flex justify-between">
+                    Quest Title
+                    <span className="text-[rgba(187,201,207,0.4)]">Required</span>
+                  </label>
+                  <input
+                    id="modal-task-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onBlur={() => setTitleTouched(true)}
+                    maxLength={100}
+                    placeholder="Enter task title..."
+                    className="w-full bg-[#201f21] border-0 border-b border-[#3c494e] focus:border-[#00d4ff] focus:ring-0 text-[#e5e1e4] text-base py-3 px-0 transition-all placeholder:text-[rgba(187,201,207,0.3)]"
+                    autoFocus
+                  />
+                  {titleTouched && !titleValidation.valid && (
+                    <ValidationError message={titleValidation.error} />
+                  )}
+                </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={!isFormValid || submitting}
-                  className="flex-1 rounded-lg bg-madrid-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-madrid-700 focus:outline-none focus:ring-2 focus:ring-madrid-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting…' : 'Submit Proposal'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="rounded-lg border border-surface-200 bg-white px-4 py-2.5 text-sm font-medium text-surface-700 transition-colors hover:bg-surface-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                {/* Description */}
+                <div className="space-y-2">
+                  <label htmlFor="modal-task-description" className="font-mono text-[12px] text-[#3cd7ff] uppercase">
+                    Description
+                  </label>
+                  <textarea
+                    id="modal-task-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onBlur={() => setDescTouched(true)}
+                    maxLength={500}
+                    rows={4}
+                    placeholder="Detail the parameters of the quest..."
+                    className="w-full bg-[#201f21] border-0 border-b border-[#3c494e] focus:border-[#00d4ff] focus:ring-0 text-[#e5e1e4] text-base py-3 px-0 transition-all placeholder:text-[rgba(187,201,207,0.3)] resize-none"
+                  />
+                  {descTouched && !descValidation.valid && (
+                    <ValidationError message={descValidation.error} />
+                  )}
+                </div>
+
+                {/* Difficulty Selection */}
+                <div className="space-y-4">
+                  <label className="font-mono text-[12px] text-[#3cd7ff] uppercase">
+                    Difficulty Selection
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {DIFFICULTY_OPTIONS.map((option) => {
+                      const isSelected = difficulty === option.value;
+                      return (
+                        <label key={option.value} className="cursor-pointer">
+                          <input
+                            type="radio"
+                            name="difficulty"
+                            value={option.value}
+                            checked={isSelected}
+                            onChange={() => setDifficulty(option.value)}
+                            className="hidden"
+                          />
+                          <div className={`p-4 border bg-[#1c1b1d] transition-all duration-200 flex flex-col items-center text-center gap-2 ${isSelected
+                            ? 'border-[#3cd7ff] bg-[rgba(0,212,255,0.05)] shadow-[0_0_10px_rgba(0,212,255,0.2)]'
+                            : 'border-[#3c494e]/30 hover:border-[#3c494e]'
+                            }`}>
+                            <span className={`font-mono text-[12px] uppercase ${option.colorClass}`}>
+                              {option.label}
+                            </span>
+                            <div className="text-[#e5e1e4] font-headline text-2xl font-semibold">
+                              {option.coins} Coin{option.coins > 1 ? 's' : ''}
+                            </div>
+                            <div className="w-full h-[1px] bg-[#3c494e]/20" />
+                            <span className="font-mono text-[12px] text-[rgba(187,201,207,0.6)]">
+                              {option.sublabel}
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex flex-col md:flex-row gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={!isFormValid || submitting}
+                    className="flex-1 bg-[#00d4ff] text-[#003642] font-headline text-xl font-semibold py-4 shadow-[0_0_20px_rgba(0,212,255,0.4)] hover:bg-[#3cd7ff] transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin text-lg">sync</span>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Submit Proposal
+                        <span className="material-symbols-outlined text-lg">send</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="flex-1 border border-[rgba(60,215,255,0.3)] text-[#3cd7ff] font-headline text-xl font-semibold py-4 hover:bg-[rgba(0,212,255,0.1)] transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Bottom progress bar decoration */}
+            <div className="w-full h-1 bg-[#3c494e]/10">
+              <div className="h-full w-2/3 bg-gradient-to-r from-[#00d4ff] to-[#6100e0]" />
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
