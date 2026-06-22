@@ -279,144 +279,147 @@ export function QuestBoardPage() {
             )}
           </div>
 
-          {/* Fixed Right Panel */}
-          <aside className="hidden lg:block w-[340px] h-screen fixed right-0 top-0 glass-panel rounded-none border-l border-[rgba(0,212,255,0.1)] p-6 z-40 overflow-y-auto">
-            {/* In-Review Quests header */}
-            <div className="flex items-center gap-2 mb-6 pt-4">
-              <span className="material-symbols-outlined text-[#3cd7ff] text-xl">pending_actions</span>
-              <h3 className="font-headline text-lg font-bold text-[#e5e1e4]">In-Review Quests</h3>
-            </div>
-
-            {/* Pending tasks (limited to 5) — new inline card design */}
-            {pendingTasks.length === 0 ? (
-              <p className="py-2 text-sm text-[#859398] italic">No tasks awaiting review</p>
-            ) : (
-              <div className="space-y-3 mb-6">
-                {visiblePendingTasks.map((quest) => (
-                  <div
-                    key={quest.questId}
-                    className="bg-[#201f21] border border-[#3c494e]/30 hover:border-[rgba(0,212,255,0.5)] p-4 rounded-lg transition-colors"
-                  >
-                    {/* Top row: badge + time */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#d1bcff] bg-[rgba(205,183,255,0.1)] border border-[rgba(205,183,255,0.3)] px-2 py-0.5 rounded">
-                        Review Pending
-                      </span>
-                      <span className="text-[10px] text-[#859398] font-mono">
-                        {timeAgo(quest.createdAt)}
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h4 className="font-headline text-[16px] font-bold text-white leading-tight mb-1">
-                      {quest.title}
-                    </h4>
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded mt-1 inline-block">
-                      Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
-                    </span>
-
-                    {/* Description */}
-                    {quest.description && (
-                      <p className="text-xs text-[#859398] line-clamp-2 mb-3">
-                        {quest.description}
-                      </p>
-                    )}
-
-                    {/* Bottom row: 3 buttons */}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(quest.questId)}
-                        className="flex-1 text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded bg-[rgba(0,212,255,0.2)] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.3)] transition-colors"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleReject(quest.questId, 'Rejected via quick action')}
-                        className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReviewingQuestId(quest.questId)}
-                        className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
-                      >
-                        Review
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* REVIEW ALL button */}
-                {hasMorePending && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllPendingModal(true)}
-                    className="w-full border border-[rgba(0,212,255,0.4)] text-[#3cd7ff] py-3 font-mono uppercase tracking-widest text-sm hover:bg-[rgba(0,212,255,0.05)] transition-colors flex items-center justify-center gap-2 rounded-lg"
-                  >
-                    <span className="material-symbols-outlined text-base">tune</span>
-                    Review All
-                  </button>
-                )}
+          {/* Fixed Right Panel — rendered via portal to avoid transform containment */}
+          {createPortal(
+            <aside className="hidden lg:block w-[340px] h-screen fixed right-0 top-0 bg-[rgba(25,25,35,0.95)] backdrop-blur-xl border-l border-[rgba(0,212,255,0.08)] pt-4 px-5 pb-6 z-40 overflow-y-auto">
+              {/* In-Review Quests header */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-[#3cd7ff] text-xl">pending_actions</span>
+                <h3 className="font-headline text-lg font-bold text-[#e5e1e4]">In-Review Quests</h3>
               </div>
-            )}
 
-            {/* Rejected Tasks */}
-            {(quests?.rejected ?? []).length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-[#ffb4ab] text-xl">cancel</span>
-                  <h3 className="font-headline text-base font-bold text-[#e5e1e4]">Rejected Tasks</h3>
-                </div>
-                <div className="space-y-3">
-                  {(quests?.rejected ?? []).map((quest) => (
+              {/* Pending tasks (limited to 5) — new inline card design */}
+              {pendingTasks.length === 0 ? (
+                <p className="py-2 text-sm text-[#859398] italic">No tasks awaiting review</p>
+              ) : (
+                <div className="space-y-3 mb-6">
+                  {visiblePendingTasks.map((quest) => (
                     <div
                       key={quest.questId}
-                      className="rounded-xl border border-red-900/40 bg-red-900/10 p-4"
+                      className="bg-[#201f21] border border-[#3c494e]/30 hover:border-[rgba(0,212,255,0.5)] p-4 rounded-lg transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-[#e5e1e4]">{quest.title}</h4>
-                          {quest.description && (
-                            <p className="mt-1 text-xs text-[#bbc9cf] line-clamp-2">{quest.description}</p>
-                          )}
-                          {quest.rejectionReason && (
-                            <p className="mt-2 text-xs text-[#ffb4ab]">
-                              <span className="font-medium">Reason:</span> {quest.rejectionReason}
-                            </p>
-                          )}
-                        </div>
-                        {canResubmitTask(quest, currentMember?.memberId ?? '') && (
-                          <button
-                            type="button"
-                            onClick={() => setResubmitQuest(quest)}
-                            className="flex-shrink-0 rounded-lg border border-[rgba(0,212,255,0.4)] bg-[#003642] px-3 py-1.5 text-xs font-medium text-[#3cd7ff] transition-colors hover:shadow-glow hover:border-[#3cd7ff]"
-                            aria-label={`Resubmit task: ${quest.title}`}
-                          >
-                            Resubmit
-                          </button>
-                        )}
+                      {/* Top row: badge + time */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#d1bcff] bg-[rgba(205,183,255,0.1)] border border-[rgba(205,183,255,0.3)] px-2 py-0.5 rounded">
+                          Review Pending
+                        </span>
+                        <span className="text-[10px] text-[#859398] font-mono">
+                          {timeAgo(quest.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h4 className="font-headline text-[16px] font-bold text-white leading-tight mb-1">
+                        {quest.title}
+                      </h4>
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded mt-1 inline-block">
+                        Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
+                      </span>
+
+                      {/* Description */}
+                      {quest.description && (
+                        <p className="text-xs text-[#859398] line-clamp-2 mb-3">
+                          {quest.description}
+                        </p>
+                      )}
+
+                      {/* Bottom row: 3 buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(quest.questId)}
+                          className="flex-1 text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded bg-[rgba(0,212,255,0.2)] text-[#3cd7ff] border border-[rgba(0,212,255,0.3)] hover:bg-[rgba(0,212,255,0.3)] transition-colors"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReject(quest.questId, 'Rejected via quick action')}
+                          className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReviewingQuestId(quest.questId)}
+                          className="w-[70px] text-[11px] font-mono uppercase tracking-wider py-1.5 px-2 rounded border border-[#3c494e] text-[#e5e1e4] hover:border-[#859398] transition-colors"
+                        >
+                          Review
+                        </button>
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
 
-            {/* Propose Task promo card */}
-            <div className="mt-auto glass-panel p-5 rounded-xl border border-[rgba(0,212,255,0.3)] bg-gradient-to-br from-[#003642]/40 to-transparent shadow-[0_0_20px_rgba(0,212,255,0.1)]">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-[#3cd7ff] text-xl">add_circle</span>
-                <h4 className="font-headline text-sm font-bold text-[#e5e1e4]">Propose a Quest</h4>
+                  {/* REVIEW ALL button */}
+                  {hasMorePending && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPendingModal(true)}
+                      className="w-full border border-[rgba(0,212,255,0.4)] text-[#3cd7ff] py-3 font-mono uppercase tracking-widest text-sm hover:bg-[rgba(0,212,255,0.05)] transition-colors flex items-center justify-center gap-2 rounded-lg"
+                    >
+                      <span className="material-symbols-outlined text-base">tune</span>
+                      Review All
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Rejected Tasks */}
+              {(quests?.rejected ?? []).length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="material-symbols-outlined text-[#ffb4ab] text-xl">cancel</span>
+                    <h3 className="font-headline text-base font-bold text-[#e5e1e4]">Rejected Tasks</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {(quests?.rejected ?? []).map((quest) => (
+                      <div
+                        key={quest.questId}
+                        className="rounded-xl border border-red-900/40 bg-red-900/10 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-[#e5e1e4]">{quest.title}</h4>
+                            {quest.description && (
+                              <p className="mt-1 text-xs text-[#bbc9cf] line-clamp-2">{quest.description}</p>
+                            )}
+                            {quest.rejectionReason && (
+                              <p className="mt-2 text-xs text-[#ffb4ab]">
+                                <span className="font-medium">Reason:</span> {quest.rejectionReason}
+                              </p>
+                            )}
+                          </div>
+                          {canResubmitTask(quest, currentMember?.memberId ?? '') && (
+                            <button
+                              type="button"
+                              onClick={() => setResubmitQuest(quest)}
+                              className="flex-shrink-0 rounded-lg border border-[rgba(0,212,255,0.4)] bg-[#003642] px-3 py-1.5 text-xs font-medium text-[#3cd7ff] transition-colors hover:shadow-glow hover:border-[#3cd7ff]"
+                              aria-label={`Resubmit task: ${quest.title}`}
+                            >
+                              Resubmit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Propose Task promo card */}
+              <div className="mt-auto glass-panel p-5 rounded-xl border border-[rgba(0,212,255,0.3)] bg-gradient-to-br from-[#003642]/40 to-transparent shadow-[0_0_20px_rgba(0,212,255,0.1)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-[#3cd7ff] text-xl">add_circle</span>
+                  <h4 className="font-headline text-sm font-bold text-[#e5e1e4]">Propose a Quest</h4>
+                </div>
+                <p className="text-xs text-[#bbc9cf] mb-4">
+                  Have an idea? Submit a task proposal for Scrum Master review.
+                </p>
+                <ProposeTaskForm onSubmit={handlePropose} />
               </div>
-              <p className="text-xs text-[#bbc9cf] mb-4">
-                Have an idea? Submit a task proposal for Scrum Master review.
-              </p>
-              <ProposeTaskForm onSubmit={handlePropose} />
-            </div>
-          </aside>
+            </aside>,
+            document.body
+          )}
 
           {/* Mission Control: Bulk Review Modal */}
           {showAllPendingModal && createPortal(
