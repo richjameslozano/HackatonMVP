@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, HTTPException
@@ -47,13 +48,29 @@ async def receive_webhook(request: Request) -> dict:
         body = LarkWebhookPayload.model_validate_json(raw_body)
     except Exception:
         # Lark sometimes sends JSON with non-standard formatting (e.g. trailing
-        # commas or unusual whitespace). Fall back to parsing via json.loads first.
+        # commas, unquoted values, or unusual whitespace).
         logger.debug("model_validate_json failed, attempting json.loads fallback. Raw body: %s", raw_body[:2000])
         try:
             # Attempt standard Python JSON parsing (handles some edge cases better)
             decoded = raw_body.decode("utf-8-sig")  # strip BOM if present
             parsed = json.loads(decoded)
             body = LarkWebhookPayload.model_validate(parsed)
+        except json.JSONDecodeError:
+            # Lark may send unquoted field values — attempt to fix with regex
+            try:
+                decoded = raw_body.decode("utf-8-sig")
+                # Quote unquoted values: match key-value pairs where value is unquoted
+                fixed = re.sub(
+                    r':\s*([^",\[\]{}\s][^,\n\r}\]]*?)(\s*[,}\]])',
+                    lambda m: ': "' + m.group(1).strip() + '"' + m.group(2),
+                    decoded,
+                )
+                parsed = json.loads(fixed)
+                body = LarkWebhookPayload.model_validate(parsed)
+                logger.info("Successfully parsed webhook payload after fixing unquoted values")
+            except Exception as exc:
+                logger.error("Failed to parse webhook payload: %s\nRaw body (first 500 bytes): %s", exc, raw_body[:500])
+                raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
         except Exception as exc:
             logger.error("Failed to parse webhook payload: %s\nRaw body (first 500 bytes): %s", exc, raw_body[:500])
             raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc

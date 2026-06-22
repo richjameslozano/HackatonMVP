@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { Project } from '../../types';
+import type { Project, Member } from '../../types';
 import { listProjects, getProjectQuestCount, createProject } from '../../services/project.service';
+import { useProjectStore } from '../../store/project.store';
 import { truncateDescription } from '../../utils/formatting';
+import { ProjectRenameForm } from '../project/ProjectRenameForm';
 import { LoadingIndicator } from '../shared/LoadingIndicator';
 import { ErrorBanner } from '../shared/ErrorBanner';
 
@@ -27,24 +29,36 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Connect to project store for rename functionality
+  const renameProject = useProjectStore((s) => s.renameProject);
+  const renameError = useProjectStore((s) => s.renameError);
+  const storeProjects = useProjectStore((s) => s.projects);
+  const fetchStoreProjects = useProjectStore((s) => s.fetchProjects);
+  const scrumMasters = useProjectStore((s) => s.scrumMasters);
+  const fetchScrumMasters = useProjectStore((s) => s.fetchScrumMasters);
+  const assignScrumMasterToProject = useProjectStore((s) => s.assignScrumMasterToProject);
+  const assignError = useProjectStore((s) => s.assignError);
+
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Fetch projects from both the store and local state (for quest counts)
+      await fetchStoreProjects();
+      await fetchScrumMasters();
       const projectList = await listProjects();
 
       // Fetch quest counts in parallel, non-blocking per project
       const projectsWithCounts: ProjectWithCount[] = await Promise.all(
         projectList.map(async (project) => {
-          let questCount: number | null = null;
           try {
-            questCount = await getProjectQuestCount(project.projectId);
+            const questCount = await getProjectQuestCount(project.projectId);
+            return { ...project, questCount };
           } catch {
             // Non-blocking: show "—" if count fetch fails
-            questCount = null;
+            return { ...project, questCount: null };
           }
-          return { ...project, questCount };
         })
       );
 
@@ -56,11 +70,32 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchStoreProjects, fetchScrumMasters]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchProjects();
   }, [fetchProjects]);
+
+  // Derive displayed projects: merge local quest counts with store project names
+  // (reflects optimistic rename updates or rollbacks from useProjectStore)
+  const displayedProjects = projects.map((p) => {
+    const storeProject = storeProjects.find((sp) => sp.projectId === p.projectId);
+    if (storeProject && storeProject.name !== p.name) {
+      return { ...p, name: storeProject.name };
+    }
+    return p;
+  });
+
+  // ─── Rename Handler ───────────────────────────────────────────────────────
+
+  async function handleRename(projectId: string, newName: string): Promise<void> {
+    await renameProject(projectId, newName);
+  }
+
+  async function handleAssignSm(projectId: string, scrumMasterId: string): Promise<void> {
+    await assignScrumMasterToProject(projectId, scrumMasterId, 'admin');
+  }
 
   // ─── Create Project Handler ─────────────────────────────────────────────
 
@@ -116,6 +151,11 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
         </button>
       </div>
 
+      {/* Rename Error Banner */}
+      {renameError && (
+        <ErrorBanner message={renameError} />
+      )}
+
       {/* Create Project Form */}
       {showForm && (
         <form onSubmit={handleCreateProject} className="rounded-xl border border-[#3c494e] bg-[#1c1b1d] p-4 space-y-3">
@@ -163,40 +203,89 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
       )}
 
       {/* Empty State */}
-      {projects.length === 0 && !showForm && (
+      {displayedProjects.length === 0 && !showForm && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-[#859398] text-sm">No projects found. Add one to get started.</p>
         </div>
       )}
 
       {/* Project List */}
-      {projects.length > 0 && (
+      {displayedProjects.length > 0 && (
         <div className="space-y-3">
-          {projects.map((project) => (
-            <button
-              key={project.projectId}
-              type="button"
-              onClick={() => onSelectProject?.(project.projectId)}
-              className="w-full rounded-xl border border-[#3c494e] bg-[#201f21] px-4 py-3 text-left transition hover:border-[#00d4ff]/50 hover:bg-[#2a2a2c] focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-1"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-[#e5e1e4] truncate">
-                    {project.name}
-                  </h3>
-                  {project.description && (
-                    <p className="mt-1 text-sm text-[#859398] leading-relaxed">
-                      {truncateDescription(project.description, 200)}
-                    </p>
-                  )}
+          {displayedProjects.map((project) => {
+            const existingNames = displayedProjects
+              .filter((p) => p.projectId !== project.projectId)
+              .map((p) => p.name);
+
+            return (
+              <div
+                key={project.projectId}
+                className="w-full rounded-xl border border-[#3c494e] bg-[#201f21] px-4 py-3 transition hover:border-[#00d4ff]/50 hover:bg-[#2a2a2c]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onSelectProject?.(project.projectId)}
+                    className="min-w-0 flex-1 text-left focus:outline-none focus:ring-2 focus:ring-[#00d4ff] focus:ring-offset-1 rounded-lg"
+                  >
+                    <h3 className="text-sm font-semibold text-[#e5e1e4] truncate">
+                      {project.name}
+                    </h3>
+                    {project.description && (
+                      <p className="mt-1 text-sm text-[#859398] leading-relaxed">
+                        {truncateDescription(project.description, 200)}
+                      </p>
+                    )}
+                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="rounded-full bg-[#00d4ff]/10 px-2.5 py-0.5 text-xs font-medium text-[#3cd7ff]">
+                      {project.questCount !== null ? project.questCount : '—'}{' '}
+                      {project.questCount === 1 ? 'quest' : 'quests'}
+                    </span>
+                    <ProjectRenameForm
+                      projectId={project.projectId}
+                      currentName={project.name}
+                      existingNames={existingNames}
+                      onRename={handleRename}
+                    />
+                  </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#00d4ff]/10 px-2.5 py-0.5 text-xs font-medium text-[#3cd7ff]">
-                  {project.questCount !== null ? project.questCount : '—'}{' '}
-                  {project.questCount === 1 ? 'quest' : 'quests'}
-                </span>
+
+                {/* Scrum Master Assignment */}
+                <div className="mt-3 pt-3 border-t border-[#3c494e]/50">
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor={`sm-${project.projectId}`}
+                      className="text-xs font-mono uppercase tracking-wider text-[#859398] shrink-0"
+                    >
+                      Scrum Master:
+                    </label>
+                    {scrumMasters.length === 0 ? (
+                      <span className="text-xs text-[#859398] italic">No SMs available</span>
+                    ) : (
+                      <select
+                        id={`sm-${project.projectId}`}
+                        value={storeProjects.find((p) => p.projectId === project.projectId)?.scrumMasterId ?? ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            void handleAssignSm(project.projectId, e.target.value);
+                          }
+                        }}
+                        className="flex-1 max-w-xs rounded-lg border border-[#3c494e] bg-[#131315] px-3 py-1.5 text-sm text-[#e5e1e4] focus:outline-none focus:ring-1 focus:ring-[#00d4ff] focus:border-[#00d4ff]"
+                      >
+                        <option value="">— None —</option>
+                        {scrumMasters.map((sm) => (
+                          <option key={sm.memberId} value={sm.memberId}>
+                            {sm.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

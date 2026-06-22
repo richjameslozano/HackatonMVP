@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { validateTaskTitle, validateTaskDescription } from '../../utils/validation';
 import { ValidationError } from '../shared';
+import { ProjectSelector } from '../project/ProjectSelector';
 import type { Difficulty } from '../../types';
 import { useAppStore } from '../../store/app.store';
+import { useProjectStore } from '../../store/project.store';
 
 interface ProposeTaskFormProps {
-  onSubmit: (title: string, description: string, difficulty: Difficulty) => Promise<void>;
+  onSubmit: (title: string, description: string, difficulty: Difficulty, projectId: string) => Promise<void>;
 }
 
 const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; coins: number; sublabel: string; colorClass: string }[] = [
@@ -17,19 +19,32 @@ const DIFFICULTY_OPTIONS: { value: Difficulty; label: string; coins: number; sub
 
 export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
   const currentMember = useAppStore((s) => s.currentMember);
-  const hasProject = Boolean(currentMember?.projectId);
+  const hasProject = (currentMember?.projectIds.length ?? 0) > 0;
+
+  const developerProjects = useProjectStore((s) => s.developerProjects);
+  const projectsLoading = useProjectStore((s) => s.projectsLoading);
+  const fetchDeveloperProjects = useProjectStore((s) => s.fetchDeveloperProjects);
 
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectError, setProjectError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descTouched, setDescTouched] = useState(false);
 
+  // Fetch developer projects on mount when member is available
+  useEffect(() => {
+    if (currentMember?.memberId) {
+      void fetchDeveloperProjects(currentMember.memberId);
+    }
+  }, [currentMember?.memberId, fetchDeveloperProjects]);
+
   const titleValidation = validateTaskTitle(title);
   const descValidation = validateTaskDescription(description);
-  const isFormValid = titleValidation.valid && descValidation.valid;
+  const isFormValid = titleValidation.valid && descValidation.valid && !!selectedProjectId;
 
   function handleOpen() {
     setShowModal(true);
@@ -40,6 +55,8 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     setTitle('');
     setDescription('');
     setDifficulty('easy');
+    setSelectedProjectId(null);
+    setProjectError(null);
     setTitleTouched(false);
     setDescTouched(false);
   }
@@ -49,11 +66,18 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
     setTitleTouched(true);
     setDescTouched(true);
 
+    // Validate project selection (Req 1.4)
+    if (!selectedProjectId) {
+      setProjectError('Project selection is required');
+      return;
+    }
+    setProjectError(null);
+
     if (!isFormValid || submitting) return;
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), description.trim(), difficulty);
+      await onSubmit(title.trim(), description.trim(), difficulty, selectedProjectId);
       handleClose();
     } finally {
       setSubmitting(false);
@@ -132,6 +156,18 @@ export function ProposeTaskButton({ onSubmit }: ProposeTaskFormProps) {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Project Selection */}
+                <ProjectSelector
+                  projects={developerProjects}
+                  selectedProjectId={selectedProjectId}
+                  onSelect={(projectId) => {
+                    setSelectedProjectId(projectId);
+                    setProjectError(null);
+                  }}
+                  error={projectError}
+                  disabled={projectsLoading}
+                />
+
                 {/* Title */}
                 <div className="space-y-2 group">
                   <label htmlFor="modal-task-title" className="font-mono text-[12px] text-[#3cd7ff] uppercase flex justify-between">

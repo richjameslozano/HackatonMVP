@@ -26,6 +26,7 @@ export interface Project {
   projectId: string;
   name: string;
   description: string;
+  scrumMasterId: string | null;
 }
 
 // ─── Domain Interfaces ──────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ export interface Member {
   roles: Role[];
   primaryRole: Role;
   scrumMasterId: string | null;
-  projectId: string | null;
+  projectIds: string[];
 }
 
 export interface QuestEditHistoryEntry {
@@ -64,6 +65,7 @@ export interface Quest {
   withdrawn?: boolean;
   difficulty: Difficulty | null;
   projectIds: string[];
+  scrumMasterId: string | null;
 }
 
 export interface QuestCompletion {

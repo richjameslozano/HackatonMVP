@@ -1,6 +1,7 @@
 import type { Member, LarkFilter, LarkRecord } from '../types';
 import { listRecords, getRecord, updateRecord, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
+import { serializeProjectIds, deserializeProjectIds } from '../utils/project-ids';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ export function mapRecordToMember(record: LarkRecord): Member {
     roles: parseRoles(fields.roles),
     primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
     scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
-    projectId: extractTextValue(fields.project_id) || null,
+    projectIds: deserializeProjectIds(extractTextValue(fields.project_id)),
   };
 }
 
@@ -132,39 +133,48 @@ export async function listAllMembers(): Promise<Member[]> {
 
 /**
  * Lists members that are assigned to a specific project.
+ * A member's `project_id` field holds a comma-separated list of project IDs,
+ * so membership is matched client-side (the backend `is` filter only does
+ * exact matches and would miss members with multiple projects).
  */
 export async function getMembersForProject(projectId: string): Promise<Member[]> {
-  const filter: LarkFilter = {
-    conjunction: 'and',
-    conditions: [
-      {
-        field_name: 'project_id',
-        operator: 'is',
-        value: [projectId],
-      },
-    ],
-  };
-
-  const records = await listRecords(TABLE_IDS.members, filter);
-  return records.map(mapRecordToMember);
+  const records = await listRecords(TABLE_IDS.members);
+  return records
+    .map(mapRecordToMember)
+    .filter((member) => member.projectIds.includes(projectId));
 }
 
 /**
- * Assigns a member to a project by updating their project_id field.
+ * Assigns a member to a project by appending the project ID to their
+ * `project_id` list. No-op if the member is already in the project.
  */
 export async function assignMemberToProject(memberId: string, projectId: string): Promise<Member> {
+  const existing = await getMemberById(memberId);
+
+  if (existing.projectIds.includes(projectId)) {
+    return existing;
+  }
+
+  const updatedIds = [...existing.projectIds, projectId];
   const record = await updateRecord(TABLE_IDS.members, memberId, {
-    project_id: projectId,
+    project_id: serializeProjectIds(updatedIds),
   });
   return mapRecordToMember(record);
 }
 
 /**
- * Removes a member from their current project by clearing project_id.
+ * Removes a member from a project. When `projectId` is provided, only that
+ * project is removed from the member's list; otherwise all projects are cleared.
  */
-export async function removeMemberFromProject(memberId: string): Promise<Member> {
+export async function removeMemberFromProject(memberId: string, projectId?: string): Promise<Member> {
+  const existing = await getMemberById(memberId);
+
+  const updatedIds = projectId
+    ? existing.projectIds.filter((id) => id !== projectId)
+    : [];
+
   const record = await updateRecord(TABLE_IDS.members, memberId, {
-    project_id: '',
+    project_id: serializeProjectIds(updatedIds),
   });
   return mapRecordToMember(record);
 }

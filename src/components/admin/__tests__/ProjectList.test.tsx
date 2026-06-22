@@ -9,6 +9,28 @@ const mockGetProjectQuestCount = vi.fn();
 vi.mock('../../../services/project.service', () => ({
   listProjects: (...args: unknown[]) => mockListProjects(...args),
   getProjectQuestCount: (...args: unknown[]) => mockGetProjectQuestCount(...args),
+  createProject: vi.fn().mockResolvedValue({ projectId: 'new', name: 'New', description: '' }),
+}));
+
+// ─── Mock project store ─────────────────────────────────────────────────────
+
+const mockRenameProject = vi.fn();
+const mockFetchProjects = vi.fn().mockResolvedValue(undefined);
+const mockFetchScrumMasters = vi.fn().mockResolvedValue(undefined);
+const mockAssignScrumMasterToProject = vi.fn();
+
+vi.mock('../../../store/project.store', () => ({
+  useProjectStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      renameProject: mockRenameProject,
+      renameError: null,
+      projects: [],
+      fetchProjects: mockFetchProjects,
+      scrumMasters: [],
+      fetchScrumMasters: mockFetchScrumMasters,
+      assignScrumMasterToProject: mockAssignScrumMasterToProject,
+      assignError: null,
+    }),
 }));
 
 import { ProjectList } from '../ProjectList';

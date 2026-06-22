@@ -61,15 +61,15 @@ export async function deductCoins(memberId: string, amount: number): Promise<num
 // ─── Reward Item CRUD ───────────────────────────────────────────────────────
 
 export async function getActiveRewardItems(): Promise<RewardItem[]> {
-    const filter: LarkFilter = {
-        conjunction: 'and',
-        conditions: [
-            { field_name: 'is_active', operator: 'is', value: ['true'] },
-        ],
-    };
-
-    const records = await listRecords(TABLE_IDS.rewardItems, filter);
-    const items = records.map(mapRecordToRewardItem);
+    // NOTE: We intentionally do NOT push an `is_active` filter to the backend.
+    // Lark stores `is_active` as a boolean checkbox, but the backend's filter
+    // matcher compares values as strings, so `is_active is ['true']` never
+    // matches a boolean `true` and silently drops every item. Instead we fetch
+    // all items and filter on the mapped boolean field client-side.
+    const records = await listRecords(TABLE_IDS.rewardItems);
+    const items = records
+        .map(mapRecordToRewardItem)
+        .filter((item) => item.isActive);
     items.sort((a, b) => a.cost - b.cost);
     return items;
 }

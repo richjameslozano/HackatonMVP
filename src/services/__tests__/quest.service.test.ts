@@ -109,8 +109,8 @@ describe('quest.service - Property 4: Completion record includes correct coins_a
           expect(capturedFields).toHaveLength(1);
           expect(capturedFields[0]!.coins_awarded).toBe(coinAmount);
 
-          // Verify awardCoinsForCompletion was called with the quest's difficulty
-          expect(awardCoinsForCompletion).toHaveBeenCalledWith(questId, difficulty);
+          // Verify awardCoinsForCompletion was called with the quest's difficulty and memberId
+          expect(awardCoinsForCompletion).toHaveBeenCalledWith(questId, difficulty, memberId);
         },
       ),
       { numRuns: 100 },

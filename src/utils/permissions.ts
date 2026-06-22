@@ -64,3 +64,38 @@ export function canResubmitTask(quest: Quest, viewerId: string): boolean {
 export function isAdmin(member: Member): boolean {
   return (member.roles as string[]).includes('admin');
 }
+
+// ─── Project Permission Checks ──────────────────────────────────────────────
+
+/**
+ * Returns true only if the member has the admin role.
+ * Gates project renaming operations.
+ */
+export function canRenameProject(member: Member): boolean {
+  return (member.roles as string[]).includes('admin');
+}
+
+/**
+ * Returns true only if the member has the admin role.
+ * Gates Scrum Master assignment to tasks.
+ */
+export function canAssignScrumMaster(member: Member): boolean {
+  return (member.roles as string[]).includes('admin');
+}
+
+/**
+ * Returns true if the given Scrum Master ID appears in any of the
+ * project task map's value arrays. The projectTaskMap maps project IDs
+ * to arrays of scrum master IDs assigned to tasks in that project.
+ */
+export function isScrumMasterAssignedToProject(
+  scrumMasterId: string,
+  projectTaskMap: Map<string, string[]>
+): boolean {
+  for (const smIds of projectTaskMap.values()) {
+    if (smIds.includes(scrumMasterId)) {
+      return true;
+    }
+  }
+  return false;
+}

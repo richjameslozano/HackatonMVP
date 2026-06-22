@@ -105,6 +105,7 @@ export function QuestCard({ quest, onComplete, disabled, completed }: QuestCardP
               +{getCoinReward()} Coin{getCoinReward() > 1 ? 's' : ''}
             </span>
           </div>
+
         </div>
 
         {/* Right side — avatars + action */}

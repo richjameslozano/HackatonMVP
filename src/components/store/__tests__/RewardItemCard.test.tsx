@@ -33,14 +33,14 @@ function makeItem(overrides: Partial<RewardItem> = {}): RewardItem {
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('RewardItemCard', () => {
-  it('renders SVG placeholder when imageUrl is null', () => {
+  it('renders icon placeholder when imageUrl is null', () => {
     const item = makeItem({ imageUrl: null });
 
     render(<RewardItemCard item={item} balance={200} onPurchaseClick={vi.fn()} />);
 
-    // The SVG placeholder should be rendered (the svg element inside the placeholder div)
-    const svg = document.querySelector('svg');
-    expect(svg).toBeInTheDocument();
+    // The Material Symbols icon placeholder should be rendered
+    const icon = screen.getByText('redeem');
+    expect(icon).toBeInTheDocument();
 
     // No img element should be present
     const img = document.querySelector('img');
@@ -62,7 +62,7 @@ describe('RewardItemCard', () => {
 
     render(<RewardItemCard item={item} balance={200} onPurchaseClick={vi.fn()} />);
 
-    expect(screen.getByText('7 left')).toBeInTheDocument();
+    expect(screen.getByText('7 Left in Stock')).toBeInTheDocument();
   });
 
   it('does not show stock count when stockQuantity is -1 (unlimited)', () => {

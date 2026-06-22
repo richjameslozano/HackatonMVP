@@ -68,7 +68,7 @@ export function ProjectMemberManager({ projectId }: ProjectMemberManagerProps) {
   async function handleRemove(memberId: string) {
     setActionLoading(memberId);
     try {
-      await removeMemberFromProject(memberId);
+      await removeMemberFromProject(memberId, projectId);
       await fetchData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to remove member.';
@@ -197,8 +197,11 @@ export function ProjectMemberManager({ projectId }: ProjectMemberManagerProps) {
                     </p>
                     <p className="text-xs text-[#859398] capitalize">
                       {member.primaryRole}
-                      {member.projectId && (
-                        <span className="ml-1 text-yellow-500">(in another project)</span>
+                      {member.projectIds.length > 0 && (
+                        <span className="ml-1 text-yellow-500">
+                          (in {member.projectIds.length} other{' '}
+                          {member.projectIds.length === 1 ? 'project' : 'projects'})
+                        </span>
                       )}
                     </p>
                   </div>

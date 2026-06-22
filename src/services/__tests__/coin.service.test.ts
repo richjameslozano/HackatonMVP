@@ -114,21 +114,15 @@ describe('coin.service - Property Tests', () => {
   // Feature: coin-store-system, Property 3: Coin balance is non-negative sum of coins_awarded
   // **Validates: Requirements 2.4**
   describe('Property 3: Coin balance is non-negative sum of coins_awarded', () => {
-    const coinsAwardedArrayArb = fc.array(fc.nat({ max: 10000 }));
-
-    it('returns the sum of all coins_awarded values for a member', async () => {
+    it('returns the coins value stored on the member record', async () => {
       await fc.assert(
-        fc.asyncProperty(coinsAwardedArrayArb, async (coinsArray) => {
-          // Mock listRecords to return records with the generated coins_awarded values
-          const records = coinsArray.map((coins, index) => ({
-            record_id: `rec_${index}`,
-            fields: {
-              member_id: 'member_test',
-              coins_awarded: coins,
-            },
-          }));
-
-          mockListRecords.mockResolvedValue(records);
+        fc.asyncProperty(fc.nat({ max: 100000 }), async (coinBalance) => {
+          // getCoinBalance reads a single member record's 'coins' field via getRecord
+          const { getRecord } = await import('../lark-api.service');
+          vi.mocked(getRecord).mockResolvedValue({
+            record_id: 'member_test',
+            fields: { coins: coinBalance },
+          });
 
           // Mock extractNumberValue to return the number directly
           mockExtractNumberValue.mockImplementation((value: unknown) => {
@@ -138,10 +132,7 @@ describe('coin.service - Property Tests', () => {
 
           const result = await getCoinBalance('member_test');
 
-          // Expected sum
-          const expectedSum = coinsArray.reduce((sum, val) => sum + val, 0);
-
-          expect(result).toBe(expectedSum);
+          expect(result).toBe(coinBalance);
 
           // Result is always >= 0
           expect(result).toBeGreaterThanOrEqual(0);
@@ -150,11 +141,20 @@ describe('coin.service - Property Tests', () => {
       );
     });
 
-    it('returns 0 for empty array (no completions)', async () => {
+    it('returns 0 when member has no coins field', async () => {
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async () => {
-          // Mock listRecords to return empty array
-          mockListRecords.mockResolvedValue([]);
+          // getRecord returns a member with no coins value
+          const { getRecord } = await import('../lark-api.service');
+          vi.mocked(getRecord).mockResolvedValue({
+            record_id: 'member_test',
+            fields: {},
+          });
+
+          mockExtractNumberValue.mockImplementation((value: unknown) => {
+            if (typeof value === 'number') return value;
+            return 0;
+          });
 
           const result = await getCoinBalance('member_test');
 

@@ -66,9 +66,9 @@ export function QuestBoardPage() {
   );
 
   const handlePropose = useCallback(
-    async (title: string, description: string, difficulty: Difficulty) => {
+    async (title: string, description: string, difficulty: Difficulty, projectId: string) => {
       try {
-        await storeProposeTask(title, description, difficulty);
+        await storeProposeTask(title, description, difficulty, projectId);
         setToast({ message: 'Task proposed successfully!', type: 'success' });
       } catch {
         setToast({ message: 'Failed to propose task. Please try again.', type: 'warning' });
@@ -265,6 +265,18 @@ export function QuestBoardPage() {
                 quests={quests?.assigned ?? []}
                 onComplete={handleComplete}
                 completedQuestIds={completedQuestIds}
+              />
+            )}
+
+            {(quests?.daily ?? []).length > 0 && (
+              <QuestCategory
+                title="Project Tasks"
+                quests={quests?.daily ?? []}
+                onComplete={handleComplete}
+                completedQuestIds={completedQuestIds}
+                icon={
+                  <span className="material-symbols-outlined text-2xl">folder_open</span>
+                }
               />
             )}
 

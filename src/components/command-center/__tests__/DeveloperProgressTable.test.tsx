@@ -16,7 +16,7 @@ function createDeveloper(
             roles: ['developer'],
             primaryRole: 'developer',
             scrumMasterId: 'sm1',
-            projectId: null,
+            projectIds: [],
         },
         totalQuests: 10,
         completedQuests: 5,

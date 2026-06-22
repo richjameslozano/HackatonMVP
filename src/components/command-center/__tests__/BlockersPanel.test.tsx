@@ -12,7 +12,7 @@ function createMember(id: string, name: string): Member {
         roles: ['developer'],
         primaryRole: 'developer',
         scrumMasterId: null,
-        projectId: null,
+        projectIds: [],
     };
 }
 

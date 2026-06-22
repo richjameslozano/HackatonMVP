@@ -1,11 +1,15 @@
+from pathlib import Path
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    lark_verification_token: str = "5QUyXj2SETuDUQtr7pJaLcwiPua7bSmP"
+    lark_verification_token: str = "Geaq0C0Yp030L0eGaXq8vhTPMQDhDMU"
     cors_origins: str = "http://localhost:5173"
     max_connections: int = 50
 
@@ -32,7 +36,7 @@ class Settings(BaseSettings):
     api_shared_secret: str = ""
 
     model_config = {
-        "env_file": ".env",
+        "env_file": str(_ENV_FILE),
         "env_file_encoding": "utf-8",
     }
 

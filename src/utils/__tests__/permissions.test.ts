@@ -18,7 +18,7 @@ describe('Property 8: Admin role access control', () => {
       roles: roles as Member['roles'],
       primaryRole: 'agent',
       scrumMasterId: null,
-      projectId: null,
+      projectIds: [],
     };
   }
 

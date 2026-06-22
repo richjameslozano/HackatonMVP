@@ -70,7 +70,7 @@ export interface AppState {
   setLeaderboardTimePeriod: (period: TimePeriod) => void;
   fetchQuests: () => Promise<void>;
   completeQuest: (questId: string) => Promise<void>;
-  proposeTask: (title: string, description: string, difficulty?: Difficulty) => Promise<void>;
+  proposeTask: (title: string, description: string, difficulty?: Difficulty, projectId?: string) => Promise<void>;
   approveTask: (questId: string) => Promise<void>;
   rejectTask: (questId: string, reason: string) => Promise<void>;
   editPendingTask: (questId: string, title: string, description: string) => Promise<void>;
@@ -298,18 +298,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  proposeTask: async (title: string, description: string, difficulty?: Difficulty) => {
+  proposeTask: async (title: string, description: string, difficulty?: Difficulty, projectId?: string) => {
     const { currentMember } = get();
     if (!currentMember) return;
 
-    // Developers must have an assigned project to propose tasks
-    if (!currentMember.projectId) {
-      throw new Error('No project assigned. Ask an admin to assign you to a project first.');
+    // Use the explicitly selected projectId, or fall back to the member's sole
+    // project when they belong to exactly one (ambiguous when they have several).
+    const resolvedProjectId =
+      projectId ?? (currentMember.projectIds.length === 1 ? currentMember.projectIds[0] : undefined);
+
+    // Developers must have a project selected to propose tasks
+    if (!resolvedProjectId) {
+      throw new Error('No project selected. Please select a project before proposing a task.');
     }
 
     let quest;
     try {
-      quest = await proposeTask(title, description, currentMember.memberId, difficulty, [currentMember.projectId]);
+      quest = await proposeTask(title, description, currentMember.memberId, difficulty, [resolvedProjectId]);
     } catch (err) {
       console.error('[proposeTask] Failed:', err);
       throw err;

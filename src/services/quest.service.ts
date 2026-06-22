@@ -13,10 +13,11 @@ import type {
 } from '../types';
 import { listRecords, getRecord, createRecord, updateRecord, extractTextValue, extractNumberValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
-import { validateTaskTitle, validateTaskDescription, validateRejectionReason, validateAdminTaskTitle, validateAdminTaskDescription, validateDifficulty, validateProjectSelection } from '../utils/validation';
+import { validateTaskTitle, validateTaskDescription, validateRejectionReason, validateAdminTaskTitle, validateAdminTaskDescription, validateDifficulty, validateProjectSelection, validateSmTaskCreation } from '../utils/validation';
 import { canCompleteQuest } from '../utils/permissions';
 import { awardCoinsForCompletion } from './coin.service';
 import { serializeProjectIds } from '../utils/project-ids';
+import { getAssignedProjectsForScrumMaster } from './project.service';
 
 // ─── Record Mapping ─────────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ function mapRecordToQuest(record: LarkRecord): Quest {
     withdrawn,
     difficulty: parseDifficulty(extractTextValue(fields.difficulty)),
     projectIds: parseProjectIds(extractTextValue(fields.project_ids)),
+    scrumMasterId: extractLinkOrTextValue(fields.scrum_master_id) || null,
   };
 }
 
@@ -209,8 +211,10 @@ function categorizeQuests(
     if (daily.length > 0) result.daily = daily;
     if (milestones.length > 0) result.milestones = milestones;
   } else {
-    // Developer: active sprint tasks + pending tasks (filtered by ownership/SM relationship)
+    // Developer: active sprint tasks + other active tasks + pending/rejected
     const sprint = teamQuests.filter((q) => q.category === 'sprint');
+    const other = teamQuests.filter((q) => q.category !== 'sprint');
+
     // Only show pending quests that:
     // 1. Were proposed by the current user (their own proposals), OR
     // 2. Were proposed by developers managed by this user (if they're a scrum master)
@@ -224,6 +228,7 @@ function categorizeQuests(
     );
 
     if (sprint.length > 0) result.sprint = sprint;
+    if (other.length > 0) result.daily = other;
     if (pending.length > 0) result.pending = pending;
     if (rejected.length > 0) result.rejected = rejected;
   }
@@ -295,6 +300,8 @@ export async function getQuestsForRole(
 /**
  * Proposes a new sprint task for a developer.
  * Validates inputs, creates a quest record with status='pending' and proposer_id set.
+ * Requires a project selection — blocks submission if no project is provided.
+ * On Lark sync failure the error propagates; the caller must not add the task to local state.
  */
 export async function proposeTask(
   title: string,
@@ -303,6 +310,12 @@ export async function proposeTask(
   difficulty?: Difficulty,
   projectIds?: string[]
 ): Promise<Quest> {
+  // Validate project selection is required (Req 1.4)
+  const projectValidation = validateProjectSelection(projectIds ?? []);
+  if (!projectValidation.valid) {
+    throw new Error(projectValidation.error ?? 'Project selection is required');
+  }
+
   const titleValidation = validateTaskTitle(title);
   if (!titleValidation.valid) {
     throw new Error(titleValidation.error ?? 'Invalid title');
@@ -323,6 +336,7 @@ export async function proposeTask(
     assignee_id: developerId,
     completion_mode: 'multiple',
     proposer_id: developerId,
+    project_ids: serializeProjectIds(projectIds!),
     created_at: Date.now(),
   };
 
@@ -331,11 +345,7 @@ export async function proposeTask(
     fields.difficulty = difficulty;
   }
 
-  // Persist project association if provided
-  if (projectIds && projectIds.length > 0) {
-    fields.project_ids = serializeProjectIds(projectIds);
-  }
-
+  // createRecord throws on Lark sync failure — error propagates to caller (Req 1.7)
   const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
   return mapRecordToQuest(record);
 }
@@ -430,6 +440,7 @@ export async function delegateTask(
 /**
  * Approves a pending task, updating its status from 'pending' to 'active'.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function approveTask(questId: string, _scrumMasterId: string): Promise<Quest> {
   const record = await getRecord(TABLE_IDS.quests, questId);
   const quest = mapRecordToQuest(record);
@@ -675,6 +686,65 @@ export async function resubmitTask(
     created_at: Date.now(),
   };
 
+  const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
+  return mapRecordToQuest(record);
+}
+
+// ─── SM Task Creation ───────────────────────────────────────────────────────
+
+/**
+ * Creates a task by a Scrum Master within a project they are assigned to.
+ * Validates inputs, verifies SM authorization for the target project,
+ * then creates the task with status "active" and assignment_type "assigned".
+ *
+ * On Lark sync failure, the error propagates to the caller — the task is NOT
+ * added to any local list.
+ *
+ * Validates: Requirements 3.1, 3.2, 3.5, 3.6, 3.8
+ */
+export async function createSmTask(params: {
+  title: string;
+  description?: string;
+  assigneeId: string;
+  projectId: string;
+  scrumMasterId: string;
+}): Promise<Quest> {
+  const { title, description, assigneeId, projectId, scrumMasterId } = params;
+
+  // Validate required fields (title 1–200 chars, assignee required, project required)
+  const validation = validateSmTaskCreation(title, assigneeId, projectId);
+  if (!validation.valid) {
+    throw new Error(validation.error ?? 'Invalid task creation input');
+  }
+
+  // Verify the SM is assigned to the target project
+  const assignedProjects = await getAssignedProjectsForScrumMaster(scrumMasterId);
+  const isAuthorized = assignedProjects.some((project) => project.projectId === projectId);
+
+  if (!isAuthorized) {
+    throw new Error('Scrum Master is not authorized for this project');
+  }
+
+  // Build the quest record fields
+  const fields: Record<string, unknown> = {
+    title: title.trim(),
+    status: 'active',
+    assignment_type: 'assigned',
+    assignee_id: assigneeId,
+    project_ids: projectId,
+    scrum_master_id: scrumMasterId,
+    category: 'sprint',
+    target_role: 'developer',
+    completion_mode: 'multiple',
+    created_at: Date.now(),
+  };
+
+  // Include description if provided
+  if (description !== undefined) {
+    fields.description = description.trim();
+  }
+
+  // Create the record — on failure, error propagates to caller (task not added)
   const record = await createRecord(TABLE_IDS.quests, fields, { sync: true });
   return mapRecordToQuest(record);
 }

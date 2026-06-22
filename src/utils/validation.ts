@@ -163,3 +163,82 @@ export function validateImageUrl(url: string): ValidationResult {
     return { valid: false, error: 'Image URL must be a valid URL or empty' };
   }
 }
+
+// ─── Project Name Validation ────────────────────────────────────────────────
+
+/**
+ * Validates a project name for creation or renaming.
+ * Trims input, rejects empty/whitespace-only, rejects >100 chars after trim.
+ */
+export function validateProjectName(name: string): ValidationResult {
+  const trimmed = name.trim();
+
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'Project name cannot be empty' };
+  }
+
+  if (trimmed.length > 100) {
+    return { valid: false, error: 'Project name must be 100 characters or fewer' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validates project name uniqueness via case-insensitive comparison after trim.
+ * When `currentProjectId` is provided, the caller should exclude the current project's
+ * name from `existingNames` to allow renaming to the same name (no-op rename).
+ * This parameter serves as a semantic marker — filtering is the caller's responsibility.
+ */
+export function validateProjectNameUniqueness(
+  name: string,
+  existingNames: string[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _currentProjectId?: string
+): ValidationResult {
+  const trimmed = name.trim().toLowerCase();
+
+  const isDuplicate = existingNames.some(
+    (existing) => existing.trim().toLowerCase() === trimmed
+  );
+
+  if (isDuplicate) {
+    return { valid: false, error: 'A project with this name already exists' };
+  }
+
+  return { valid: true };
+}
+
+// ─── SM Task Creation Validation ────────────────────────────────────────────
+
+/**
+ * Validates Scrum Master task creation inputs.
+ * Title: 1–200 chars after trim, not whitespace-only.
+ * Assignee: required (non-empty).
+ * Project: required (non-empty).
+ */
+export function validateSmTaskCreation(
+  title: string,
+  assigneeId: string,
+  projectId: string
+): ValidationResult {
+  const trimmedTitle = title.trim();
+
+  if (trimmedTitle.length === 0) {
+    return { valid: false, error: 'Task title is required and must not be whitespace-only' };
+  }
+
+  if (trimmedTitle.length > 200) {
+    return { valid: false, error: 'Task title must be 200 characters or fewer' };
+  }
+
+  if (!assigneeId || assigneeId.trim().length === 0) {
+    return { valid: false, error: 'Assignee is required' };
+  }
+
+  if (!projectId || projectId.trim().length === 0) {
+    return { valid: false, error: 'Project is required' };
+  }
+
+  return { valid: true };
+}
