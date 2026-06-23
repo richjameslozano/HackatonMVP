@@ -26,5 +26,3 @@ __pycache__
 *.sw?
 .env
 mcp.json
-# Lark credentials (use config.example.ts as template)
-src/services/config.ts

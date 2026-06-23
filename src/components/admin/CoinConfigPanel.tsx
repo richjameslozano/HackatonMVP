@@ -51,7 +51,7 @@ export function CoinConfigPanel() {
 
   // ─── Validation ─────────────────────────────────────────────────────────
 
-  function validateField(field: keyof CoinConfig, value: number): string | undefined {
+  function validateField(_field: keyof CoinConfig, value: number): string | undefined {
     const result = validateCoinValue(value);
     return result.valid ? undefined : result.error;
   }

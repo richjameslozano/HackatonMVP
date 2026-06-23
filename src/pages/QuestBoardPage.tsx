@@ -36,14 +36,11 @@ export function QuestBoardPage() {
   const storeProposeTask = useAppStore((s) => s.proposeTask);
   const storeApproveTask = useAppStore((s) => s.approveTask);
   const storeRejectTask = useAppStore((s) => s.rejectTask);
-  const storeEditPendingTask = useAppStore((s) => s.editPendingTask);
-  const storeWithdrawTask = useAppStore((s) => s.withdrawTask);
   const storeResubmitTask = useAppStore((s) => s.resubmitTask);
   const clearCompletionFeedback = useAppStore((s) => s.clearCompletionFeedback);
   const clearNotificationWarning = useAppStore((s) => s.clearNotificationWarning);
   const newBadgeUnlocked = useAppStore((s) => s.newBadgeUnlocked);
   const clearNewBadgeUnlocked = useAppStore((s) => s.clearNewBadgeUnlocked);
-  const isScrumMaster = useAppStore((s) => s.isScrumMaster);
 
   const [toast, setToast] = useState<ToastState | null>(null);
   const [resubmitQuest, setResubmitQuest] = useState<Quest | null>(null);
@@ -99,30 +96,6 @@ export function QuestBoardPage() {
       }
     },
     [storeRejectTask],
-  );
-
-  const handleEditPendingTask = useCallback(
-    async (questId: string, title: string, description: string) => {
-      try {
-        await storeEditPendingTask(questId, title, description);
-        setToast({ message: 'Task updated successfully!', type: 'success' });
-      } catch {
-        setToast({ message: 'Failed to update task. Please try again.', type: 'warning' });
-      }
-    },
-    [storeEditPendingTask],
-  );
-
-  const handleWithdrawTask = useCallback(
-    async (questId: string) => {
-      try {
-        await storeWithdrawTask(questId);
-        setToast({ message: 'Task withdrawn.', type: 'success' });
-      } catch {
-        setToast({ message: 'Failed to withdraw task. Please try again.', type: 'warning' });
-      }
-    },
-    [storeWithdrawTask],
   );
 
   const handleResubmitTask = useCallback(

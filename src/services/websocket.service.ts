@@ -236,7 +236,7 @@ class WebSocketService {
   private handleConnectionFailure(): void {
     if (!this.options) return;
 
-    if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
+    if (this.reconnectAttempts >= this.options.maxReconnectAttempts!) {
       this.setState('failed');
       return;
     }

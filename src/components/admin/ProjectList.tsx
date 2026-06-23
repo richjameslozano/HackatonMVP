@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { Project, Member } from '../../types';
+import type { Project } from '../../types';
 import { listProjects, getProjectQuestCount, createProject } from '../../services/project.service';
 import { useProjectStore } from '../../store/project.store';
 import { truncateDescription } from '../../utils/formatting';
@@ -37,7 +37,6 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
   const scrumMasters = useProjectStore((s) => s.scrumMasters);
   const fetchScrumMasters = useProjectStore((s) => s.fetchScrumMasters);
   const assignScrumMasterToProject = useProjectStore((s) => s.assignScrumMasterToProject);
-  const assignError = useProjectStore((s) => s.assignError);
 
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);

@@ -1,4 +1,4 @@
-import type { Member, Quest, QuestCompletion, LarkFilter, LarkRecord } from '../types';
+import type { Member, Quest, LarkFilter, LarkRecord } from '../types';
 import { listRecords, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
 import { mapRecordToMember } from './member.service';

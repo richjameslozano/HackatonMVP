@@ -21,7 +21,7 @@ function getAvatarColor(name: string): string {
         'bg-indigo-900/30 text-indigo-400',
     ];
     const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-    return colors[index];
+    return colors[index]!;
 }
 
 function generateCsv(developers: DeveloperOverview[]): string {

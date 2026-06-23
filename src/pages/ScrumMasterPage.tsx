@@ -143,7 +143,7 @@ export function ScrumMasterPage() {
         void loadData(); // Refresh all data
     }, [rejectTask, loadData]);
 
-    const handlePendingTaskClick = useCallback((questId: string) => {
+    const handlePendingTaskClick = useCallback((_questId: string) => {
         // Navigate to quest board where they can review it
         navigate('/quests');
     }, [navigate]);

@@ -1,6 +1,7 @@
 import type { Member, LeaderboardEntry, Badge, Role, LarkFilter, LarkRecord } from '../types';
 import { listRecords, extractTextValue } from './lark-api.service';
 import { TABLE_IDS } from './config';
+import { deserializeProjectIds } from '../utils/project-ids';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function mapRecordToMember(record: LarkRecord): Member {
     roles: parseRoles(fields.roles),
     primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
     scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
-    projectId: extractTextValue(fields.project_id) || null,
+    projectIds: deserializeProjectIds(extractTextValue(fields.project_id)),
   };
 }
 

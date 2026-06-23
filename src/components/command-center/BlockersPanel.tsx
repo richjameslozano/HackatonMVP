@@ -19,7 +19,6 @@ function getInactiveDevelopers(
     thresholdDays: number,
 ): BlockerEntry[] {
     const now = new Date();
-    const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
 
     // Build a map of developer ID -> most recent activity timestamp
     const lastActivityMap = new Map<string, Date>();

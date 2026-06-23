@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { RecentActivityEntry } from '../../services/team-progress.service';
 
 interface RecentActivityFeedProps {
@@ -44,7 +45,7 @@ function formatRelativeTime(date: Date): string {
 /**
  * Returns the icon and color styling for an activity type.
  */
-function getActivityIcon(type: RecentActivityEntry['type']): { bg: string; icon: JSX.Element } {
+function getActivityIcon(type: RecentActivityEntry['type']): { bg: string; icon: ReactElement } {
     switch (type) {
         case 'completion':
             return {
