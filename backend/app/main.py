@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import webhook, ws, health, tables
+from app.routers import webhook, ws, health, tables, proxy
 from app.services.cache import create_cache
 from app.services.connection_manager import manager
 from app.services.flush_scheduler import FlushScheduler
@@ -115,3 +115,4 @@ app.include_router(webhook.router, tags=["webhook"])
 app.include_router(ws.router, tags=["websocket"])
 app.include_router(health.router, tags=["health"])
 app.include_router(tables.router, tags=["tables"])
+app.include_router(proxy.router, tags=["proxy"])

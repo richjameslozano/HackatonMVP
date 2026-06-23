@@ -6,7 +6,10 @@ export const LARK_CONFIG = {
     appId: import.meta.env.VITE_LARK_APP_ID ?? '',
     appSecret: import.meta.env.VITE_LARK_APP_SECRET ?? '',
     baseAppToken: import.meta.env.VITE_LARK_APP_TOKEN ?? '',
-    baseUrl: import.meta.env.DEV ? '/lark-api' : 'https://open.larksuite.com/open-apis',
+    // Dev: Vite proxy (/lark-api). Prod: backend reverse-proxy to avoid browser CORS.
+    baseUrl: import.meta.env.DEV
+        ? '/lark-api'
+        : `${import.meta.env.VITE_BACKEND_URL ?? ''}/lark-api`,
 } as const;
 
 // ─── Lark Base Table IDs ────────────────────────────────────────────────────

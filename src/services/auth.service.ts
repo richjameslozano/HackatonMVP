@@ -24,9 +24,10 @@ let tokenCache: TokenCache | null = null;
 
 const REQUEST_TIMEOUT_MS = RETRY_CONFIG.timeoutMs;
 
+// Dev: Vite proxy (/lark-api). Prod: backend reverse-proxy to avoid browser CORS.
 const baseUrl = import.meta.env.DEV
   ? '/lark-api'
-  : 'https://open.larksuite.com/open-apis';
+  : `${import.meta.env.VITE_BACKEND_URL ?? ''}/lark-api`;
 
 /**
  * Creates an AbortController that auto-aborts after the configured timeout.

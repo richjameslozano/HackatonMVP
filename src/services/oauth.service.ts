@@ -14,9 +14,12 @@ import { getTenantToken } from './auth.service';
 
 const LARK_AUTHORIZE_URL = 'https://open.larksuite.com/open-apis/authen/v1/index';
 
+// Token exchange goes through the proxy (XHR is CORS-sensitive). Dev: Vite
+// proxy. Prod: backend reverse-proxy. The authorize redirect below stays direct
+// because it is a full-page browser navigation (no CORS).
 const baseUrl = import.meta.env.DEV
   ? '/lark-api'
-  : 'https://open.larksuite.com/open-apis';
+  : `${import.meta.env.VITE_BACKEND_URL ?? ''}/lark-api`;
 
 const TOKEN_EXCHANGE_PATH = '/authen/v1/access_token';
 
