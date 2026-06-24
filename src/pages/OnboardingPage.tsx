@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import type { Role } from '../types';
@@ -22,14 +22,35 @@ const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: str
 
 export function OnboardingPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
 
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const isLoading = useAuthStore((s) => s.isLoading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isOnboarding = useAuthStore((s) => s.isOnboarding);
+  const restoreSession = useAuthStore((s) => s.restoreSession);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
   const navigate = useNavigate();
+
+  // On mount, restore session to check if user is already registered
+  useEffect(() => {
+    if (!isAuthenticated && !hasCheckedSession) {
+      restoreSession().finally(() => {
+        setHasCheckedSession(true);
+      });
+    } else {
+      setHasCheckedSession(true);
+    }
+  }, [isAuthenticated, hasCheckedSession, restoreSession]);
+
+  // Redirect authenticated (already-registered) users to the main app
+  useEffect(() => {
+    if (hasCheckedSession && isAuthenticated && !isOnboarding) {
+      navigate('/quests', { replace: true });
+    }
+  }, [hasCheckedSession, isAuthenticated, isOnboarding, navigate]);
 
   const handleConfirm = async () => {
     if (!selectedRole || isLoading) return;
@@ -44,9 +65,19 @@ export function OnboardingPage() {
     }
   };
 
-  if (isAuthenticated) {
-    navigate('/quests');
-    return null;
+  // Show loading while checking session
+  if (!hasCheckedSession || isLoading && !selectedRole) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0e0e10]">
+        <div className="text-center">
+          <div
+            className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#3c494e] border-t-[#00d4ff]"
+            aria-label="Loading"
+          />
+          <p className="mt-4 text-sm text-[#bbc9cf]">Checking session…</p>
+        </div>
+      </div>
+    );
   }
 
   const isDisabled = selectedRole === null || isLoading;

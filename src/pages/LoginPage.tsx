@@ -1,12 +1,37 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 
 export function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isOnboarding = useAuthStore((s) => s.isOnboarding);
+  const restoreSession = useAuthStore((s) => s.restoreSession);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
   const gridRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
+
+  // On mount, try to restore session — redirect if already authenticated
+  useEffect(() => {
+    if (!isAuthenticated && !hasCheckedSession) {
+      restoreSession().finally(() => {
+        setHasCheckedSession(true);
+      });
+    } else {
+      setHasCheckedSession(true);
+    }
+  }, [isAuthenticated, hasCheckedSession, restoreSession]);
+
+  useEffect(() => {
+    if (hasCheckedSession && isAuthenticated && !isOnboarding) {
+      navigate('/quests', { replace: true });
+    } else if (hasCheckedSession && isOnboarding) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [hasCheckedSession, isAuthenticated, isOnboarding, navigate]);
 
   // Subtle mouse parallax on terminal grid
   useEffect(() => {
