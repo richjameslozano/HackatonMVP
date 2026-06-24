@@ -498,7 +498,7 @@ def _record_matches(record: RecordResponse, conditions: list[dict]) -> bool:
         elif operator == "contains":
             if value is None or record_value is None:
                 return False
-            if str(value) not in str(record_value):
+            if not _contains_match(record_value, value):
                 return False
         elif operator == "isGreater":
             if record_value is None or value is None:
@@ -535,6 +535,67 @@ def _extract_text_value(field_value: Any) -> str:
         if isinstance(first, str):
             return first
     return ""
+
+
+def _normalize_to_items(field_value: Any) -> list[str]:
+    """Normalize a Lark field value into a list of comparable string items.
+
+    Handles:
+    - multi-select fields: ["developer", "scrum"] -> ["developer", "scrum"]
+    - text fields: [{"text": "value"}] -> ["value"]
+    - linked fields: [{"record_id": "rec1"}] -> ["rec1"]
+    - plain strings/numbers: "developer" -> ["developer"]
+    """
+    items: list[str] = []
+    if field_value is None:
+        return items
+    if isinstance(field_value, (str, int, float, bool)):
+        return [str(field_value)]
+    if isinstance(field_value, list):
+        for el in field_value:
+            if isinstance(el, str):
+                items.append(el)
+            elif isinstance(el, (int, float, bool)):
+                items.append(str(el))
+            elif isinstance(el, dict):
+                if "text" in el:
+                    items.append(str(el["text"]))
+                elif "record_id" in el:
+                    items.append(str(el["record_id"]))
+                elif "id" in el:
+                    items.append(str(el["id"]))
+        return items
+    return items
+
+
+def _contains_match(record_value: Any, filter_value: Any) -> bool:
+    """Check if a record field 'contains' the filter value.
+
+    Designed for multi-value fields (e.g. a multi-select `roles` field returned as
+    ["developer", "scrum"]). Matches if ANY filter element equals ANY record element,
+    with a substring fallback for free-text fields.
+
+    The previous implementation compared str(filter) against str(record), which broke
+    for multi-select arrays: str(["developer"]) is not a substring of
+    str(["developer", "scrum"]).
+    """
+    record_items = _normalize_to_items(record_value)
+
+    # Lark filter convention: value is usually a single-element list, but allow scalars too.
+    if isinstance(filter_value, list):
+        filter_items = [str(v) for v in filter_value if v is not None]
+    else:
+        filter_items = [str(filter_value)]
+
+    for fi in filter_items:
+        # Exact membership match against any record item (multi-select / linked / text)
+        if any(fi == ri for ri in record_items):
+            return True
+        # Substring fallback for free-text fields
+        if any(fi in ri for ri in record_items):
+            return True
+
+    return False
 
 
 def _is_match(record_value: Any, filter_value: Any) -> bool:
