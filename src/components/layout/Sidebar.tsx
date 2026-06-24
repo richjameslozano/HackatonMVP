@@ -146,56 +146,59 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </button>
             </div>
 
-            {/* Logout confirmation modal */}
-            {showLogoutConfirm && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="logout-dialog-title"
-                    onClick={() => setShowLogoutConfirm(false)}
-                >
+            {/* Logout confirmation modal — rendered via portal so it centers on
+                the viewport instead of the transformed sidebar */}
+            {showLogoutConfirm &&
+                createPortal(
                     <div
-                        className="glass-panel w-full max-w-sm rounded-xl border border-[rgba(0,212,255,0.2)] p-6 shadow-[0_0_30px_rgba(0,212,255,0.2)]"
-                        onClick={(e) => e.stopPropagation()}
+                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="logout-dialog-title"
+                        onClick={() => setShowLogoutConfirm(false)}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(147,0,10,0.15)] text-[#ffb4ab]">
-                                <span className="material-symbols-outlined text-xl">logout</span>
+                        <div
+                            className="glass-panel w-full max-w-sm rounded-xl border border-[rgba(0,212,255,0.2)] p-6 shadow-[0_0_30px_rgba(0,212,255,0.2)]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(147,0,10,0.15)] text-[#ffb4ab]">
+                                    <span className="material-symbols-outlined text-xl">logout</span>
+                                </div>
+                                <h2
+                                    id="logout-dialog-title"
+                                    className="text-lg font-bold text-[#3cd7ff] uppercase tracking-wide font-headline"
+                                >
+                                    Log Out
+                                </h2>
                             </div>
-                            <h2
-                                id="logout-dialog-title"
-                                className="text-lg font-bold text-[#3cd7ff] uppercase tracking-wide font-headline"
-                            >
-                                Log Out
-                            </h2>
+                            <p className="mt-4 text-sm text-[#bbc9cf]">
+                                Are you sure you want to log out? You'll need to sign in again to continue.
+                            </p>
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    className="rounded-lg px-4 py-2 text-sm font-medium text-[#bbc9cf] transition-all hover:bg-[#2a2a2c] hover:text-[#3cd7ff]"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowLogoutConfirm(false);
+                                        onClose();
+                                        logout();
+                                    }}
+                                    className="rounded-lg bg-[#93000a] px-4 py-2 text-sm font-bold text-white uppercase tracking-wide transition-all hover:bg-[#b3151f] hover:shadow-[0_0_15px_rgba(147,0,10,0.5)]"
+                                >
+                                    Log Out
+                                </button>
+                            </div>
                         </div>
-                        <p className="mt-4 text-sm text-[#bbc9cf]">
-                            Are you sure you want to log out? You'll need to sign in again to continue.
-                        </p>
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowLogoutConfirm(false)}
-                                className="rounded-lg px-4 py-2 text-sm font-medium text-[#bbc9cf] transition-all hover:bg-[#2a2a2c] hover:text-[#3cd7ff]"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowLogoutConfirm(false);
-                                    onClose();
-                                    logout();
-                                }}
-                                className="rounded-lg bg-[#93000a] px-4 py-2 text-sm font-bold text-white uppercase tracking-wide transition-all hover:bg-[#b3151f] hover:shadow-[0_0_15px_rgba(147,0,10,0.5)]"
-                            >
-                                Log Out
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    </div>,
+                    document.body
+                )}
         </aside>
     );
 }
