@@ -208,7 +208,7 @@ export function QuestBoardPage() {
               quests={quests?.assigned ?? []}
               onComplete={handleComplete}
               completedQuestIds={completedQuestIds}
-            projectNameMap={projectNameMap}
+              projectNameMap={projectNameMap}
             />
           )}
 
@@ -259,7 +259,7 @@ export function QuestBoardPage() {
                 quests={quests?.assigned ?? []}
                 onComplete={handleComplete}
                 completedQuestIds={completedQuestIds}
-              projectNameMap={projectNameMap}
+                projectNameMap={projectNameMap}
               />
             )}
 
@@ -322,7 +322,7 @@ export function QuestBoardPage() {
                         {quest.title}
                       </h4>
                       <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded mt-1 inline-block">
-                        Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
+                        Project: {quest.projectIds.length > 0 ? quest.projectIds.map(id => projectNameMap[id] || id).join(', ') : 'Unassigned'}
                       </span>
 
                       {/* Description */}
@@ -507,7 +507,7 @@ export function QuestBoardPage() {
                             </span>
                             <span className="w-1 h-1 bg-[#3c494e] rounded-full"></span>
                             <span className="text-[10px] font-mono uppercase tracking-wider text-[#bbc9cf] border border-[#3c494e]/50 bg-[#201f21] px-1.5 py-0.5">
-                              Project: {quest.projectIds.length > 0 ? quest.projectIds.join(', ') : 'Unassigned'}
+                              Project: {quest.projectIds.length > 0 ? quest.projectIds.map(id => projectNameMap[id] || id).join(', ') : 'Unassigned'}
                             </span>
                           </div>
                         </div>
