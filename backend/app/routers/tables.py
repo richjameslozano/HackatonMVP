@@ -417,10 +417,10 @@ def _reapply_pending_writes(
             if existing is not None:
                 merged = {**existing.fields, **op.fields}
                 cache.set(table_id, op.record_id, merged)
-            else:
-                # Record not in the fresh dataset (e.g. created+updated before flush);
-                # keep the optimistic update visible.
-                cache.set(table_id, op.record_id, op.fields)
+            # If there's no base record in the freshly fetched dataset, skip:
+            # writing only the partial update fields (e.g. just {"coins": N})
+            # would create a record missing open_id/roles, corrupting member
+            # lookup and role filters. The pending write will still flush to Lark.
 
 
 async def _background_refresh(

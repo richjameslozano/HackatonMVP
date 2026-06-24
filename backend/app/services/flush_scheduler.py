@@ -247,13 +247,21 @@ class FlushScheduler:
                 table_id, records_payload
             )
 
-            # Update cache with fresh data from response
+            # Merge fresh data from response into the cached record.
+            # Updates are partial (e.g. only {"coins": N}), so we must NOT
+            # overwrite the full cached record — otherwise fields like open_id
+            # and roles would be lost, which breaks member lookup (false
+            # "new user" → onboarding) and role-based filters (leaderboard).
             for updated in updated_records:
                 record_id = updated.get("record_id", "")
                 if record_id:
-                    self._cache.set(
-                        table_id, record_id, updated.get("fields", {})
-                    )
+                    new_fields = updated.get("fields", {})
+                    existing = self._cache.get(table_id, record_id)
+                    if existing is not None:
+                        merged = {**existing.fields, **new_fields}
+                        self._cache.set(table_id, record_id, merged)
+                    else:
+                        self._cache.set(table_id, record_id, new_fields)
 
             return True, 0
 
