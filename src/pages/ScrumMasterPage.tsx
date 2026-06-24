@@ -27,7 +27,6 @@ import { TABLE_IDS } from '../services/config';
 import { delegateTask } from '../services/quest.service';
 import { listProjects } from '../services/project.service';
 import { validateTaskTitle, validateTaskDescription } from '../utils/validation';
-import { SmTaskCreationForm } from '../components/quest/SmTaskCreationForm';
 import type { Difficulty, Project } from '../types';
 
 export function ScrumMasterPage() {
@@ -52,9 +51,6 @@ export function ScrumMasterPage() {
     // Delegate task modal state
     const [showDelegateModal, setShowDelegateModal] = useState(false);
     const [delegateSubmitting, setDelegateSubmitting] = useState(false);
-
-    // SM task creation modal state
-    const [showSmTaskModal, setShowSmTaskModal] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!currentMember) return; // still waiting for member to load
@@ -209,14 +205,6 @@ export function ScrumMasterPage() {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setShowSmTaskModal(true)}
-                        className="inline-flex items-center gap-1.5 border border-[#00d4ff]/40 px-4 py-2.5 text-sm font-bold text-[#00d4ff] font-mono uppercase tracking-wider transition-all hover:bg-[#00d4ff]/10 hover:shadow-[0_0_15px_rgba(0,212,255,0.2)] focus:outline-none active:scale-95"
-                    >
-                        <span className="material-symbols-outlined text-lg">add</span>
-                        Create Task
-                    </button>
                     <button
                         type="button"
                         onClick={() => setShowDelegateModal(true)}
@@ -413,15 +401,6 @@ export function ScrumMasterPage() {
                             setDelegateSubmitting(false);
                         }
                     }}
-                />
-            )}
-
-            {/* SM Task Creation Modal (project-scoped) */}
-            {showSmTaskModal && (
-                <SmTaskCreationForm
-                    developers={overview?.developers ?? []}
-                    onClose={() => setShowSmTaskModal(false)}
-                    onTaskCreated={() => void loadData()}
                 />
             )}
         </div>

@@ -11,7 +11,7 @@ import type {
   LarkFilter,
 } from '../types';
 import type { ConnectionState } from '../types/realtime';
-import { getCurrentMember, getScrumMasterForDeveloper } from '../services/member.service';
+import { getCurrentMemberWithScrumCheck, getScrumMasterForDeveloper } from '../services/member.service';
 import { getQuestsForRole, proposeTask, approveTask, rejectTask, completeQuest, editPendingTask, withdrawPendingTask, resubmitTask } from '../services/quest.service';
 import { evaluateBadgeUnlocks, getBadgeCollection } from '../services/badge.service';
 import { getLeaderboard, type TimePeriod } from '../services/leaderboard.service';
@@ -116,45 +116,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   // ─── Actions ────────────────────────────────────────────────────────────
 
   initializeApp: async (openId: string) => {
-    const member = await getCurrentMember(openId);
+    const { member, isScrumFromRecord } = await getCurrentMemberWithScrumCheck(openId);
 
-    // Check if this user is a scrum master by fetching all members and checking
-    // if any member's scrum_master_id matches this user's memberId or openId.
-    // Also check if the current user's own roles include scrum_master indicators.
-    // Also collect the IDs of developers managed by this user.
-    let isScrumMaster = false;
+    // Start with SM detection from own record (roles field + self-referencing scrum_master_id)
+    let isScrumMaster = isScrumFromRecord;
     const managedDeveloperIds: string[] = [];
+
+    // Also check if other members reference this user as their scrum master,
+    // which would confirm SM status and identify managed developers.
     try {
       const allMembers = await listRecords(TABLE_IDS.members);
       for (const rec of allMembers) {
-        // Include current user's own record in check (they might reference themselves)
+        // Skip self
+        if (rec.record_id === member.memberId) continue;
+
         const rawSmField = rec.fields.scrum_master_id;
         let isManaged = false;
-
-        // Skip self for managed developers list, but still check SM indicators
-        if (rec.record_id === member.memberId) {
-          // Check if own record has scrum_master role indicator
-          const rolesField = rec.fields.roles;
-          if (Array.isArray(rolesField)) {
-            for (const role of rolesField) {
-              const roleStr = typeof role === 'string' ? role : (typeof role === 'object' && role !== null && 'text' in role ? (role as { text: string }).text : '');
-              if (roleStr.toLowerCase().includes('scrum') || roleStr.toLowerCase().includes('master') || roleStr.toLowerCase() === 'sm') {
-                isScrumMaster = true;
-              }
-            }
-          }
-          if (typeof rolesField === 'string') {
-            if (rolesField.toLowerCase().includes('scrum') || rolesField.toLowerCase().includes('master') || rolesField.toLowerCase() === 'sm') {
-              isScrumMaster = true;
-            }
-          }
-          // Check if scrum_master_id points to self (self-referencing means "I am the SM")
-          const ownSmId = extractTextValue(rawSmField);
-          if (ownSmId && (ownSmId === member.memberId || ownSmId === member.openId)) {
-            isScrumMaster = true;
-          }
-          continue;
-        }
 
         const smIdText = extractTextValue(rawSmField);
         if (smIdText && (smIdText === member.memberId || smIdText === member.openId)) {
@@ -182,8 +159,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
     } catch (err) {
-      console.error('[initializeApp] Failed to check scrum master status:', err);
-      // Don't reset isScrumMaster if it was already set from own roles check
+      console.error('[initializeApp] Failed to check managed developers:', err);
+      // isScrumMaster may still be true from own record check — that's fine.
+      // managedDeveloperIds will be empty, so SM dashboard won't show managed devs.
     }
 
     // Restore role from sessionStorage or use primary role
