@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppStore } from '../store/app.store';
 import { QuestCategory, ProposeTaskForm, ResubmitTaskModal } from '../components/quest';
 import { LoadingIndicator, CompletionAnimation, ConfirmationToast, ConfettiAnimation } from '../components/shared';
 import { canResubmitTask } from '../utils/permissions';
+import { listProjects } from '../services/project.service';
 import type { Quest, Difficulty } from '../types';
 
 interface ToastState {
@@ -46,6 +47,20 @@ export function QuestBoardPage() {
   const [resubmitQuest, setResubmitQuest] = useState<Quest | null>(null);
   const [showAllPendingModal, setShowAllPendingModal] = useState(false);
   const [reviewingQuestId, setReviewingQuestId] = useState<string | null>(null);
+  const [projectNameMap, setProjectNameMap] = useState<Record<string, string>>({});
+
+  // Load project names on mount
+  useEffect(() => {
+    listProjects()
+      .then((projects) => {
+        const map: Record<string, string> = {};
+        for (const p of projects) {
+          map[p.projectId] = p.name;
+        }
+        setProjectNameMap(map);
+      })
+      .catch(() => { /* ignore */ });
+  }, []);
 
   const pendingTasks = useMemo(() => quests?.pending ?? [], [quests]);
   const visiblePendingTasks = useMemo(() => pendingTasks.slice(0, 3), [pendingTasks]);
@@ -170,6 +185,7 @@ export function QuestBoardPage() {
             quests={quests?.onboarding ?? []}
             onComplete={handleComplete}
             completedQuestIds={completedQuestIds}
+            projectNameMap={projectNameMap}
             icon={
               <span className="material-symbols-outlined text-2xl">school</span>
             }
@@ -180,6 +196,7 @@ export function QuestBoardPage() {
             quests={quests?.milestones ?? []}
             onComplete={handleComplete}
             completedQuestIds={completedQuestIds}
+            projectNameMap={projectNameMap}
             icon={
               <span className="material-symbols-outlined text-2xl">emoji_events</span>
             }
@@ -191,6 +208,7 @@ export function QuestBoardPage() {
               quests={quests?.assigned ?? []}
               onComplete={handleComplete}
               completedQuestIds={completedQuestIds}
+            projectNameMap={projectNameMap}
             />
           )}
 
@@ -200,6 +218,7 @@ export function QuestBoardPage() {
               quests={quests?.open ?? []}
               onComplete={handleComplete}
               completedQuestIds={completedQuestIds}
+              projectNameMap={projectNameMap}
               emptyMessage="No open tasks available"
             />
           )}
@@ -209,6 +228,7 @@ export function QuestBoardPage() {
             quests={quests?.daily ?? []}
             onComplete={handleComplete}
             completedQuestIds={completedQuestIds}
+            projectNameMap={projectNameMap}
             showStreak
             icon={
               <span className="material-symbols-outlined text-2xl">schedule</span>
@@ -227,6 +247,7 @@ export function QuestBoardPage() {
               quests={quests?.sprint ?? []}
               onComplete={handleComplete}
               completedQuestIds={completedQuestIds}
+              projectNameMap={projectNameMap}
               icon={
                 <span className="material-symbols-outlined text-2xl">check_circle</span>
               }
@@ -238,6 +259,7 @@ export function QuestBoardPage() {
                 quests={quests?.assigned ?? []}
                 onComplete={handleComplete}
                 completedQuestIds={completedQuestIds}
+              projectNameMap={projectNameMap}
               />
             )}
 
@@ -247,6 +269,7 @@ export function QuestBoardPage() {
                 quests={quests?.daily ?? []}
                 onComplete={handleComplete}
                 completedQuestIds={completedQuestIds}
+                projectNameMap={projectNameMap}
                 icon={
                   <span className="material-symbols-outlined text-2xl">folder_open</span>
                 }
@@ -259,6 +282,7 @@ export function QuestBoardPage() {
                 quests={quests?.open ?? []}
                 onComplete={handleComplete}
                 completedQuestIds={completedQuestIds}
+                projectNameMap={projectNameMap}
                 emptyMessage="No open tasks available"
               />
             )}

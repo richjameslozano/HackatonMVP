@@ -9,6 +9,7 @@ interface QuestCategoryProps {
   emptyMessage?: string;
   showStreak?: boolean;
   icon?: React.ReactNode;
+  projectNameMap?: Record<string, string>;
 }
 
 export function QuestCategory({
@@ -19,6 +20,7 @@ export function QuestCategory({
   emptyMessage = 'No quests available',
   showStreak = false,
   icon,
+  projectNameMap,
 }: QuestCategoryProps) {
   const completedCount = quests.filter(
     (q) => completedQuestIds?.has(q.questId),
@@ -81,6 +83,7 @@ export function QuestCategory({
               onComplete={onComplete}
               disabled={quest.status !== 'active'}
               completed={completedQuestIds?.has(quest.questId) ?? false}
+              projectNameMap={projectNameMap}
             />
           ))}
         </div>

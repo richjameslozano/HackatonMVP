@@ -6,9 +6,10 @@ interface QuestCardProps {
   onComplete: (questId: string) => void;
   disabled?: boolean;
   completed?: boolean;
+  projectNameMap?: Record<string, string>;
 }
 
-export function QuestCard({ quest, onComplete, disabled, completed }: QuestCardProps) {
+export function QuestCard({ quest, onComplete, disabled, completed, projectNameMap }: QuestCardProps) {
   const isCompletable = canCompleteQuest(quest) && !disabled && !completed;
 
   function handleAction() {
@@ -68,7 +69,7 @@ export function QuestCard({ quest, onComplete, disabled, completed }: QuestCardP
             </span>
             {quest.projectIds.length > 0 && (
               <span className="font-mono text-[10px] uppercase tracking-wider text-[#3cd7ff] bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] px-2 py-0.5 rounded">
-                Project: {quest.projectIds.join(', ')}
+                Project: {quest.projectIds.map(id => projectNameMap?.[id] || id).join(', ')}
               </span>
             )}
           </div>
