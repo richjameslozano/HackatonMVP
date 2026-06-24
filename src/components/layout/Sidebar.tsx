@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../../store/app.store';
+import { useAuthStore } from '../../store/auth.store';
 import { isAdmin } from '../../utils/permissions';
 import { RoleSwitcher } from './RoleSwitcher';
 
@@ -36,6 +37,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const selectedRole = useAppStore((s) => s.selectedRole);
     const isScrumMaster = useAppStore((s) => s.isScrumMaster);
     const badgeCollection = useAppStore((s) => s.badgeCollection);
+    const logout = useAuthStore((s) => s.logout);
 
     return (
         <aside
@@ -127,6 +129,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </NavLink>
                 )}
             </nav>
+
+            {/* Logout */}
+            <div className="border-t border-[rgba(0,212,255,0.1)] px-3 py-3">
+                <button
+                    type="button"
+                    onClick={() => {
+                        onClose();
+                        logout();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#bbc9cf] transition-all hover:bg-[rgba(147,0,10,0.15)] hover:text-[#ffb4ab]"
+                    aria-label="Log out"
+                >
+                    <span className="material-symbols-outlined text-xl">logout</span>
+                    Log Out
+                </button>
+            </div>
         </aside>
     );
 }
