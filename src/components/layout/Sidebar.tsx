@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../../store/app.store';
 import { useAuthStore } from '../../store/auth.store';
@@ -38,6 +39,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const isScrumMaster = useAppStore((s) => s.isScrumMaster);
     const badgeCollection = useAppStore((s) => s.badgeCollection);
     const logout = useAuthStore((s) => s.logout);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     return (
         <aside
@@ -134,10 +136,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="border-t border-[rgba(0,212,255,0.1)] px-3 py-3">
                 <button
                     type="button"
-                    onClick={() => {
-                        onClose();
-                        logout();
-                    }}
+                    onClick={() => setShowLogoutConfirm(true)}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#bbc9cf] transition-all hover:bg-[rgba(147,0,10,0.15)] hover:text-[#ffb4ab]"
                     aria-label="Log out"
                 >
@@ -145,6 +144,57 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     Log Out
                 </button>
             </div>
+
+            {/* Logout confirmation modal */}
+            {showLogoutConfirm && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="logout-dialog-title"
+                    onClick={() => setShowLogoutConfirm(false)}
+                >
+                    <div
+                        className="glass-panel w-full max-w-sm rounded-xl border border-[rgba(0,212,255,0.2)] p-6 shadow-[0_0_30px_rgba(0,212,255,0.2)]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(147,0,10,0.15)] text-[#ffb4ab]">
+                                <span className="material-symbols-outlined text-xl">logout</span>
+                            </div>
+                            <h2
+                                id="logout-dialog-title"
+                                className="text-lg font-bold text-[#3cd7ff] uppercase tracking-wide font-headline"
+                            >
+                                Log Out
+                            </h2>
+                        </div>
+                        <p className="mt-4 text-sm text-[#bbc9cf]">
+                            Are you sure you want to log out? You'll need to sign in again to continue.
+                        </p>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="rounded-lg px-4 py-2 text-sm font-medium text-[#bbc9cf] transition-all hover:bg-[#2a2a2c] hover:text-[#3cd7ff]"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowLogoutConfirm(false);
+                                    onClose();
+                                    logout();
+                                }}
+                                className="rounded-lg bg-[#93000a] px-4 py-2 text-sm font-bold text-white uppercase tracking-wide transition-all hover:bg-[#b3151f] hover:shadow-[0_0_15px_rgba(147,0,10,0.5)]"
+                            >
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </aside>
     );
 }
