@@ -21,6 +21,45 @@ export function mapRecordToMember(record: LarkRecord): Member {
   };
 }
 
+/**
+ * Checks if a raw Lark record indicates the member has a scrum master role.
+ * Inspects both the roles field (for 'scrum'/'master'/'sm' values) and
+ * the scrum_master_id field (self-referencing means "I am the SM").
+ */
+export function hasScrumRoleInRecord(record: LarkRecord): boolean {
+  const fields = record.fields;
+  const rolesField = fields.roles;
+
+  // Check roles array for scrum-related values
+  if (Array.isArray(rolesField)) {
+    for (const role of rolesField) {
+      const roleStr = typeof role === 'string'
+        ? role
+        : (typeof role === 'object' && role !== null && 'text' in role
+            ? (role as { text: string }).text
+            : '');
+      const lower = roleStr.toLowerCase();
+      if (lower.includes('scrum') || lower.includes('master') || lower === 'sm') {
+        return true;
+      }
+    }
+  }
+  if (typeof rolesField === 'string') {
+    const lower = rolesField.toLowerCase();
+    if (lower.includes('scrum') || lower.includes('master') || lower === 'sm') {
+      return true;
+    }
+  }
+
+  // Check if scrum_master_id references self (self-referencing means "I am the SM")
+  const smId = extractTextValue(fields.scrum_master_id);
+  if (smId && smId === record.record_id) {
+    return true;
+  }
+
+  return false;
+}
+
 function parseRoles(value: unknown): Member['roles'] {
   if (Array.isArray(value)) {
     const parsed: string[] = [];
@@ -58,6 +97,7 @@ function parseSingleRole(value: unknown): 'agent' | 'developer' | 'admin' | null
 /**
  * Resolves the current user from the Members table using their Lark open_id.
  * For the MVP, the open_id is passed as a parameter.
+ * Returns both the mapped Member and whether the raw record indicates scrum master role.
  */
 export async function getCurrentMember(openId: string): Promise<Member> {
   const filter: LarkFilter = {
@@ -78,6 +118,34 @@ export async function getCurrentMember(openId: string): Promise<Member> {
   }
 
   return mapRecordToMember(records[0]!);
+}
+
+/**
+ * Same as getCurrentMember but also returns the scrum role indicator from the raw record.
+ */
+export async function getCurrentMemberWithScrumCheck(openId: string): Promise<{ member: Member; isScrumFromRecord: boolean }> {
+  const filter: LarkFilter = {
+    conjunction: 'and',
+    conditions: [
+      {
+        field_name: 'open_id',
+        operator: 'is',
+        value: [openId],
+      },
+    ],
+  };
+
+  const records = await listRecords(TABLE_IDS.members, filter);
+
+  if (records.length === 0) {
+    throw new Error(`Member not found for open_id: ${openId}`);
+  }
+
+  const record = records[0]!;
+  return {
+    member: mapRecordToMember(record),
+    isScrumFromRecord: hasScrumRoleInRecord(record),
+  };
 }
 
 /**
