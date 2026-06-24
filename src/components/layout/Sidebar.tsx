@@ -46,7 +46,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Big QUESTS title */}
             <div className="px-5 pt-6 pb-2">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-[48px] font-bold text-[#3cd7ff] tracking-tighter uppercase leading-none font-headline">
+                    <h1 className="text-[38px] font-bold text-[#3cd7ff] tracking-tighter uppercase leading-none font-headline">
                         SPMadrid QuestHub
                     </h1>
                     {/* Mobile close */}
