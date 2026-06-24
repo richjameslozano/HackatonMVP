@@ -10,12 +10,18 @@ import { serializeProjectIds, deserializeProjectIds } from '../utils/project-ids
  */
 export function mapRecordToMember(record: LarkRecord): Member {
   const fields = record.fields;
+  const roles = parseRoles(fields.roles);
+  // If primary_role can't be parsed to a valid Role (e.g. the DB stores 'scrum',
+  // which isn't a UI Role), fall back to the member's first parsed role rather
+  // than blindly defaulting to 'agent' — otherwise a developer/scrum master would
+  // be loaded as an agent and shown the wrong quests/leaderboard/badges.
+  const primaryRole = parseSingleRole(fields.primary_role) ?? roles[0] ?? 'agent';
   return {
     memberId: record.record_id,
     displayName: extractTextValue(fields.display_name),
     openId: extractTextValue(fields.open_id),
-    roles: parseRoles(fields.roles),
-    primaryRole: parseSingleRole(fields.primary_role) ?? 'agent',
+    roles,
+    primaryRole,
     scrumMasterId: extractTextValue(fields.scrum_master_id) || null,
     projectIds: deserializeProjectIds(extractTextValue(fields.project_id)),
   };

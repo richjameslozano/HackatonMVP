@@ -141,7 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           for (const item of rawSmField) {
             if (typeof item === 'object' && item !== null) {
               const linkedId = (item as Record<string, unknown>).record_id ?? (item as Record<string, unknown>).id ?? '';
-              if (linkedId === member.memberId) {
+              if (linkedId === member.memberId || linkedId === member.openId) {
                 isManaged = true;
               }
             }

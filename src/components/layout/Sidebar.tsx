@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../../store/app.store';
+import { isAdmin } from '../../utils/permissions';
 import { RoleSwitcher } from './RoleSwitcher';
 
 interface SidebarProps {
@@ -111,7 +112,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         Scrum Master
                     </NavLink>
                 )}
-                {currentMember && (currentMember.roles as string[]).includes('admin') && (
+                {currentMember && isAdmin(currentMember) && (
                     <NavLink
                         to="/admin"
                         onClick={onClose}

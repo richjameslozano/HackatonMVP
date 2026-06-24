@@ -32,6 +32,17 @@ class WriteQueue:
         self._queues[table_id].clear()
         return ops
 
+    def peek_table(self, table_id: str) -> list[WriteOperation]:
+        """Return a non-destructive copy of pending operations for a table, in FIFO order.
+
+        Unlike drain(), this leaves the queue intact. Used to re-apply optimistic
+        writes on top of a freshly rebuilt full-table cache so that pending (not-yet
+        flushed) creates/updates are not lost by a concurrent full refresh.
+        """
+        if table_id not in self._queues:
+            return []
+        return list(self._queues[table_id])
+
     def size(self, table_id: str | None = None) -> int:
         """Return queue size. If table_id is None, returns total across all tables."""
         if table_id is None:

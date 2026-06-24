@@ -150,6 +150,14 @@ async def search_records(
                 if table_obj is not None:
                     table_obj.entries.clear()
             cache.mark_table_fully_cached(table_id)
+
+            # Re-apply optimistic writes that are still pending in the queue.
+            # The full refresh above wiped the cache and refetched from Lark, which
+            # does NOT yet reflect not-yet-flushed creates/updates. Without this,
+            # a search that runs between a write and the next flush would make the
+            # optimistic change "disappear" until the flush completes.
+            write_queue = _get_write_queue(request)
+            _reapply_pending_writes(cache, write_queue, table_id)
         except asyncio.TimeoutError:
             raise HTTPException(
                 status_code=502, detail="Upstream service unavailable"
@@ -376,6 +384,43 @@ async def update_record(
 
 
 # ─── Background Tasks ───────────────────────────────────────────────────────
+
+
+def _reapply_pending_writes(
+    cache: CacheStore,
+    write_queue: WriteQueue,
+    table_id: str,
+) -> None:
+    """Re-apply queued (not-yet-flushed) writes on top of freshly rebuilt cache.
+
+    After a full-table refresh replaces the cache with data fetched from Lark,
+    any optimistic create/update operations still sitting in the write queue are
+    not reflected (Lark hasn't received them yet). This re-applies them so the
+    optimistic state survives a concurrent full refresh, mirroring what the
+    create/update endpoints originally wrote to the cache.
+    """
+    pending = write_queue.peek_table(table_id)
+    if not pending:
+        return
+
+    for op in pending:
+        if op.op_type == "create":
+            # Ensure the optimistic (temp) record is present.
+            existing = cache.get(table_id, op.record_id)
+            if existing is None:
+                cache.set(table_id, op.record_id, op.fields)
+            else:
+                merged = {**existing.fields, **op.fields}
+                cache.set(table_id, op.record_id, merged)
+        elif op.op_type == "update":
+            existing = cache.get(table_id, op.record_id)
+            if existing is not None:
+                merged = {**existing.fields, **op.fields}
+                cache.set(table_id, op.record_id, merged)
+            else:
+                # Record not in the fresh dataset (e.g. created+updated before flush);
+                # keep the optimistic update visible.
+                cache.set(table_id, op.record_id, op.fields)
 
 
 async def _background_refresh(
